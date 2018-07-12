@@ -35,6 +35,19 @@ sym square structure.
 
 Supply CheckResult := true to check the final result.
 
+The file smalldimreps.m contains an implementation of Greenhill's algorithm
+to recognize if a matrix is the alternating square of another matrix.
+   
+The algorithm is described in C Greenhill, "An algorithm for recognising 
+the exterior square of a matrix", Linear and Multilinear Algebra, 1999.
+   
+The function assumes that the input is a *non-singular* matrix that is a 
+member of AltSquare( SL( d, q )) in the basis 
+e_12, e_13,...,e_1d,...,e_{d-1}d.
+ 
+Greenhill's paper describes the algorithm for arbitrary, not necessary invertible, matrices, but
+this implementation only works for invertible matrices and the other cases may lead to error!
+
 Written by Csaba Schneider.
 csaba@mat.ufmg.br
 www.mat.ufmg.br/~csaba
