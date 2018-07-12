@@ -34,3 +34,7 @@ G to SL( d, q ), and a matrix whose rows form a basis that exhibits the
 sym square structure. 
 
 Supply CheckResult := true to check the final result.
+
+Written by Csaba Schneider.
+csaba@mat.ufmg.br
+www.mat.ufmg.br/~csaba
