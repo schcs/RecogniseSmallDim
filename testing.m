@@ -1,68 +1,100 @@
 SymSquare := function( type, n, q : twist := false )
 
   if type eq "SL" then
-      S := ActionGroup( SymmetricSquare( GModule( SL( n, q ))));
+      g := SL( n, q );
   elif type eq "Sp" then
-      S := ActionGroup( SymmetricSquare( GModule( Sp( n, q ))));
+      g := Sp( n, q );
   elif type eq "SU" then
-      S := ActionGroup( SymmetricSquare( GModule( SU( n, q ))));
+      g := SU( n, q );
+      q := q^2;
   elif type eq "Omega" then
-      S := ActionGroup( SymmetricSquare( GModule( Omega( n, q ))));
+      g := Omega( n, q );
   elif type eq "Omega+" then
-      M := SymmetricSquare( GModule( OmegaPlus( n, q )));
-      W := MinimalSubmodules( M )[1];
-      S := ActionGroup( M/W );
+      g := OmegaPlus( n, q );
   elif type eq "Omega-" then
-      S := ActionGroup( SymmetricSquare( GModule( OmegaMinus( n, q ))));
+      g := OmegaMinus( n, q );
   end if;
+
+  comps := [ x : x in CompositionFactors( SymmetricSquare( GModule( g ))) |
+             Dimension( x ) gt 1 ];
+  assert #comps eq 1;
+  S := ActionGroup( comps[1] );
+    
   
   if twist then
-      S := S^Random( GL( Round((n+1)*n/2), q ));
+      S := S^Random( GL( Dimension( S ), q ));
   end if;
   
   return S;
 end function;
     
 AltSquare := function( type, n, q : twist := false )
-    
-  gens := ClassicalStandardGenerators( type, n, q );  
-    
-  gensS := [ __funcSLdqToAltSquare( x ) : x in gens ];
   
-  S := sub< GL( NumberOfRows( gensS[1] ), CoefficientRing( gensS[1] )) | 
-       gensS >;
-  
-  if twist then
-      x := Random( GL( Round((n-1)*n/2), q ));
-  else 
-      x := One( GL( Round((n-1)*n/2), q ));
+  if type eq "SL" then
+      g := SL(n,q);
+  elif type eq "Sp" then
+      g := Sp(n,q);
+  elif type eq "SU" then
+      g := SU(n,q);
+      q := q^2;
+  elif type eq "Omega+" then
+      g := OmegaPlus(n,q);
+  elif type eq "Omega-" then
+      g := OmegaMinus(n,q);
+  elif type eq "Omega" then
+      g := Omega(n,q);
   end if;
-  
-  return S^x, [ GL( Round((n-1)*n/2), q )!(x^-1*y*x) : y in gensS ];
+    
+  comps := [ x : x in CompositionFactors( ExteriorSquare( GModule( g ))) |
+             Dimension( x ) gt 1 ];
+  assert #comps eq 1;
+  S := ActionGroup( comps[1] );
+    
+  if twist then
+      x := Random( GL( Dimension( S ), q ));
+  else 
+      x := One( GL( Dimension( S ), q ));
+  end if;
+
+  return S^x, GeneratorsSequence( S^x );
 end function;
     
-TestSymSquare := function( d, q : NrTries := 100 )
+TestSymSquare := function(type, d, q : NrTries := 100 )
     
     if d ge 20 then NrTries := 20; end if;
     
     for i in [1..NrTries] do
-        G := SymSquare( "SL", d, q : twist := true );
-        v, a, b, bas := RecogniseSymSquare( G : CheckResult := true );
+        G := SymSquare( type, d, q : twist := true );
+        v, a, b, bas := RecogniseSymSquare( G : type := type, CheckResult := true );
         assert v and { x@b@a*x^-1 eq x^0 : x in { Random( G ) : z in [1..100] }}           eq { true };
     end for;
     
     return true;
 end function;
     
-TestSymSquare2 := function( limd, limq, nr )
+TestSymSquare2 := function( type, limd, limq, nr )
     
     vb := GetVerbose( "SymSquareVerbose" );
     SetVerbose( "SymSquareVerbose", 0 );
     
+    ranged := case< type | "SL": [2..limd], 
+              "SU": [3..limd], 
+              "Sp": [4..limd by 2],
+              "Omega+": [12..limd by 2],
+              "Omega-": [12..limd by 2],
+              "Omega": [11..limd by 2],
+              default: [3..limd]  >;
+
+    exc := [ <"Sp", 6, 3>, <"Sp", 9, 3 >, <"SU", 6, 7 >];
     qs := [ x : x in [3..limq] | IsPrimePower( x ) and IsOdd( x )];
-    for d in [2..limd] do
+    for d in ranged do
         for q in qs do
-            print d, q, ":", TestSymSquare( d, q : NrTries := nr );;
+            if <type,d,q> in exc then 
+                print d, q, "skipped";
+                continue;
+            end if;
+
+            print d, q, ":", TestSymSquare( type, d, q : NrTries := nr );;
         end for;
     end for;
     
@@ -72,30 +104,38 @@ TestSymSquare2 := function( limd, limq, nr )
 end function;
 
 
-TestAltSquare := function( d, q : NrTries := 100,
-			   UseTensorDecomposition := false )
+TestAltSquare := function( type, d, q : NrTries := 100,
+			   UseTensorDecomposition := true )
     
     if d ge 20 then NrTries := 20; end if;
     
     for i in [1..NrTries] do
-        G := AltSquare( "SL", d, q : twist := true );
-        v, a, b, bas := RecogniseAltSquare( G : CheckResult := true,
-			UseTensorDecomposition := UseTensorDecomposition );
+        G := AltSquare( type, d, q : twist := true );
+        v, a, b, bas := RecogniseAltSquare( G : type := type, 
+                                                CheckResult := true,
+                        UseTensorDecomposition := UseTensorDecomposition );
         assert v and { x@b@a*x^-1 eq x^0 : x in { Random( G ) : z in [1..100] }}           eq { true };
     end for;
     
     return true;
 end function;
     
-TestAltSquare2 := function( limd, limq, nr : UseTensorDecomposition := false )
+TestAltSquare2 := function( type, limd, limq, nr : 
+                  UseTensorDecomposition := true )
     
     vb := GetVerbose( "SymSquareVerbose" );
     SetVerbose( "SymSquareVerbose", 0 );
     
+    ranged := case< type | "SL": [3..limd], 
+              "SU": [3..limd], 
+              "Omega+": [12..limd by 2],
+              "Omega": [11..limd by 2],
+              default: [3..limd]  >;
+    
     qs := [ x : x in [3..limq] | IsPrimePower( x ) and IsOdd( x )];
-    for d in [3..limd] do
+    for d in ranged do
         for q in qs do
-	    print d, q, ":", TestAltSquare( d, q : NrTries := nr,
+	    print d, q, ":", TestAltSquare( type, d, q : NrTries := nr,
 			 UseTensorDecomposition := UseTensorDecomposition );
         end for;
     end for;
@@ -104,3 +144,30 @@ TestAltSquare2 := function( limd, limq, nr : UseTensorDecomposition := false )
     
     return true;
 end function;
+
+SymSquareVector := function( dim, vec )
+
+    vec := Eltseq( vec );
+    res := [];
+    for i in [1..#vec] do
+        if vec[i] ne 0 then
+            Append( ~res, <vec[i],funcposinv_symsquare( dim, i )>);
+        end if;
+    end for;
+
+    return res;
+end function;
+
+VectorSymSquare := function( dim, vec : type := "SL" )
+
+    res := [];
+    d := #Eltseq( vec );
+    for i in [1..d] do 
+        if vec[i] ne 0 then
+            Append( ~res, <vec[i],funcposinv_symsquare( dim, i : type := type )>);
+        end if;
+    end for;
+
+    return res;
+end function;
+

@@ -1,0 +1,28 @@
+Known issues with RecogniseSymSquare
+
+RecogniseSymSquare( Sp, 6, 3 ) does not find suitable involution
+        probable cause: dimension too small?
+
+Sp/SU with various dimensions "Classical forms must be irreducible" error message
+        probable cause: not enough generator?
+
+RecogniseSymSquare( 1*, q, Omega+ ) does not detect when both components are Omega-
+        probable cause: Omega- detection wrong
+        PROBABLY SOLVED
+
+RecogniseSymSquare( 12, 5, Omega+ ) various problem with SplitTensor
+        probable cause: the smaller-dim spaces are symplectic and not orthogonal
+
+Omega-, 10, 3: does not  find suitable involution
+
+Omega-, 12, q : vK := Sqrt( 2*form[posK1,posK2] )^-1; gives zero
+
+Omega( 9|11, q ): SplitTensor problem
+        probable cause: trying to split tensor product in wrong order
+                        or dimension too low?
+
+Omega( 11, * ): not always finding involution
+                probable cause: ???
+
+
+Omega+, 12, 3: assert v; in line 471 of smalldimreps.m fails

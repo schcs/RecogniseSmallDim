@@ -13,9 +13,11 @@
 import "smalldimreps.m":__funcSLdqToSymSquare, 
   __funcSymSquareToSLdq, SolveSymSquareDimEq, funcpos_symsquare;
 
-import "auxfunctions.m": MyDerivedGroupMonteCarlo;
+import "auxfunctions.m": MyDerivedGroupMonteCarlo, IsSimilarToScalarMultiple, 
+    SplitTensor, IsSimilarModScalar;
 
-    
+import "symsquare_omega.m":RecogniseSymSquareWithTensorDecompositionOmegaFunc;
+
 // The recognition procedure for SL( 2, q )
     
 RecogniseSymSquareDim2 := function( G )
@@ -208,7 +210,7 @@ end function;
 // The general function
 forward RecogniseSymSquareFunc;
     
-RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := false )
+RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
     
     cputm := Cputime();
     
@@ -217,7 +219,12 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := false )
       when 3: return RecogniseSymSquareDim2( G );
       when 6: return RecogniseSymSquareDim3( G : type := type );
     end case;
-      
+
+    if type in { "Omega+", "Omega-", "Omega" } then 
+      return RecogniseSymSquareWithTensorDecompositionOmegaFunc( G : type := type, 
+                                            CheckResult := CheckResult );
+    end if;
+
     q := #CoefficientRing( G ); 
     dimg := Dimension( G );
     
@@ -262,9 +269,8 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := false )
         gensCD := gensCD cat GeneratorsSequence( CD );
         C := sub< Universe( gensC ) | gensC >;
         CD := sub< Universe( gensCD ) | gensCD >;
-        M := GModule( CD );
+        M := GModule( CD ); 
         mins := [ x : x in MinimalSubmodules( M : Limit := 4 )];
-        print [ Dimension( x ) : x in mins ];
     until  #mins eq numberofminsubs 
            and &+[ Dimension( x ) : x in mins ] eq dimg;
 
@@ -484,6 +490,7 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := false )
         
     return true, a, b, tr;
 end function;
+
     
 intrinsic RecogniseSymSquare( G::GrpMat : type := "SL", CheckResult := false ) 
           -> BoolElt, Map, Map, GrpMatElt
@@ -491,8 +498,7 @@ intrinsic RecogniseSymSquare( G::GrpMat : type := "SL", CheckResult := false )
  {G should be matrix group conjugate to the symmetric square representation
   of SL( d, q ). Returns true/false, a map from SL( d, q ) to G, a map from 
   G to SL( d, q ), and a matrix whose rows form a basis that exhibits the 
-  sym square structure. 
-                                                                                  Supply CheckResult := true to check the final result.}                     
+  sym square structure. Supply CheckResult := true to check the final result.}                     
 
   return RecogniseSymSquareFunc( G : type := type, CheckResult := CheckResult );
 end intrinsic;
