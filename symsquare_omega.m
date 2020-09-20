@@ -1,3 +1,6 @@
+/* This file contains the functions for the recognition procedure for the symmetric
+    square of Omega(d,q) (Omega+, Omega-, and Omega in odd dim) */
+
 import "smalldimreps.m":__funcSLdqToSymSquare, 
   __funcSymSquareToSLdq, SolveSymSquareDimEq, funcpos_symsquare, funcposinv_symsquare,
   BasisMatrixForSymSquareOmega;
@@ -5,15 +8,21 @@ import "smalldimreps.m":__funcSLdqToSymSquare,
 import "auxfunctions.m": MyDerivedGroupMonteCarlo, IsSimilarToScalarMultiple, 
     SplitTensor, IsSimilarModScalar;
 
-import "symsquare_omega_aux.m":TestBasisOmega,
-    OmegaPlusSubspace, OmegaMinusSubspace, OmegaPlusBasis, BuildBasisOmega;
+import "symsquare_omega_aux.m":TestBasisOmega, OmegaBasisFromComponents, 
+    BuildBasisOmega, TypeOfSymSquareOmega, SymSquareOmegaBasisWithOmegaMinus, 
+    AssignOmegaBasisFromComponents;
 
+
+AddAttribute( GrpMat, "BasisMatrixFromComponents" );
+
+// The main function 
 
 RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Omega+", 
     CheckResult := true )
     
     cputm := Cputime();
           
+    // first getting the parameters
     q := #CoefficientRing( G ); 
     _, p := IsPrimePower( q );
     dimg := Dimension( G );
@@ -21,8 +30,9 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
     z := PrimitiveElement( GF( q ));
     
     // the natural dimension of G
-    dim := SolveSymSquareDimEq( dimg : type := type ); 
-    pdivdim := dim mod p eq 0;    // see if char divides dimension
+    dim := SolveSymSquareDimEq( dimg : type := type );
+    // see if char divides dimension; 
+    pdivdim := dim mod p eq 0;    
 
     vprint SymSquareVerbose: "# Recog SymSquare dim", dim;
     
@@ -31,32 +41,39 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
       
     eiglim1 := Ceiling((2/9)*dim^2); // lower limit for eigenspace dim
     eiglim2 := Floor((1/4)*dim^2); // upper limit for eigenspace dim
-      
-    /* repeat  
-        _, inv := RandomElementOfOrder( G, 2 );
-        de := Dimension( Eigenspace( inv, -1 ));
-    until de ge eiglim1 and de le eiglim2;
-    vprint SymSquareVerbose: "#   Inv found dim", dim, "in ", Cputime()-cputm;*/
+
+    // normally use 10 generators for 
+    NrGensCentInv := 10; 
     
-    // completion checking function
-    
-    /* __compcheck := function( G, C, g ) 
-        
-         DC := MyDerivedGroupMonteCarlo( C );
-         mins := MinimalSubmodules( GModule( DC ) : Limit := 4 );
-         
-         return #mins eq 3 and &+[ Dimension( x ) : x in mins ] eq dimg;
-    end function; */
-      
-    NrGensCentInv := 10; //case< dim | 5: 30, 6: 30, default: 20 >;
+    /* completion checking function required for the calculation of the 
+        centralizer of an involution */
     __compcheck := func< G, C, g | NumberOfGenerators( C ) ge NrGensCentInv >;
     
-    __isonefactoromegaminus := function( mins, p )
+    /* The following internal function checks if an involution gives the right 
+       decomposition for the procedure. 
+
+       We want that the smaller-dimensional components shouldn't have dimensions
+       that are divisible by p.
+
+       Also, the three larger-dimensional components preserve orthogonal forms and 
+       we want the types of these forms as prescribed. 
+       
+       The argument mins is the list of minimal C-submodules in M where C is the centralizer 
+       of an involution. It typically has four such mininals, U, V, U tensor V and a 
+       1-dimensional W. If p divides dim, then the 1-dimensional component does not occur. */
+
+    __isonefactoromegaminus := function( mins )
         
+        q := #CoefficientRing( mins[1] );
+        // first get the larger-dimensional minimals
         mins := [ x : x in mins | Dimension( x ) gt 1 ];
+
+        // get their dimensions and see which correspond to symmetric square
         dims := [ Dimension( x ) : x in mins ];
         dims0 := [ SolveSymSquareDimEq( x : type := type ) : x in dims ];
-        types := [ ClassicalForms( ActionGroup( x ))`formType : x in mins ];
+
+        /* find which component is U tensor V. we set up the list inds such that 
+            inds[1] and inds[2] point to U and V, and inds[3] to U tensor V. */
         if 0 in dims0 then 
             pos_tensor := Position( dims0, 0 );
             inds := <Remove( [1,2,3], pos_tensor )[1],Remove( [1,2,3], pos_tensor )[2],
@@ -67,25 +84,32 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
             inds := inds[1];
         end if;
 
-        print types;
+        // they preserve symmetric bilinear forms; get the types
+        types := < ClassicalForms( ActionGroup( mins[inds[1]] ))`formType,
+                ClassicalForms( ActionGroup( mins[inds[2]] ))`formType >;
+       // types := [ ClassicalForms( ActionGroup( x ))`formType : x in mins ];
 
         goodtypes := case< type | 
-            "Omega+": {["orthogonalcircle", "orthogonalplus", "orthogonalcircle"]},
-            "Omega-": { ["orthogonalplus", "orthogonalminus", "orthogonalplus"],
-                        ["orthogonalcircle", "orthogonalplus", "orthogonalcircle"],
-                        ["orthogonalminus", "orthogonalplus", "orthogonalplus"]},
-            "Omega":  {["orthogonalplus", "orthogonalcircle", "orthogonalplus"],
-                        ["orthogonalcircle", "orthogonalcircle", "orthogonalplus"],
-                        ["orthogonalplus", "orthogonalminus", "orthogonalminus"],
-                        [ "orthogonalminus", "orthogonalcircle", "orthogonalplus" ]},
-            default: false >;
+                    "Omega+": {<TypeOfSymSquareOmega( "Omega+", dims0[inds[1]],q),
+                                TypeOfSymSquareOmega( "Omega+", dims0[inds[2]],q)>},
+                    "Omega-": {<TypeOfSymSquareOmega( "Omega+", dims0[inds[1]],q),
+                                TypeOfSymSquareOmega( "Omega-", dims0[inds[2]],q)>,
+                                <TypeOfSymSquareOmega( "Omega+", dims0[inds[1]],q),
+                                TypeOfSymSquareOmega( "Omega-", dims0[inds[2]],q)>},
+                    "Omega": {<TypeOfSymSquareOmega( "Omega+", dims0[inds[1]],q),
+                                TypeOfSymSquareOmega( "Omega", dims0[inds[2]],q)>,
+                                <TypeOfSymSquareOmega( "Omega", dims0[inds[1]],q),
+                                TypeOfSymSquareOmega( "Omega+", dims0[inds[2]],q)>
+                                ,
+                                <TypeOfSymSquareOmega( "Omega-", dims0[inds[1]],q),
+                                TypeOfSymSquareOmega( "Omega", dims0[inds[2]],q)>,
+                                <TypeOfSymSquareOmega( "Omega", dims0[inds[1]],q),
+                                TypeOfSymSquareOmega( "Omega-", dims0[inds[2]],q)>
+                                
+                                },
+                    default: false >;
 
-     /*   return (dims0[inds[1]] mod p eq 0) or 
-               (dims0[inds[2]] mod p eq 0) or 
-               types[inds[3]] eq "orthogonalminus" or 
-               (types[inds[1]] eq "orthogonalminus" and types[inds[2]] eq "orthogonalminus");// or
-               //(types[inds[1]] eq "orthogonalplus" and types[inds[2]] eq "orthogonalcircle");
-       */
+        //print types, goodtypes, dims0; 
 
         return (dims0[inds[1]] mod p eq 0) or 
                (dims0[inds[2]] mod p eq 0) or 
@@ -124,7 +148,7 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
         M := GModule( CD );
         mins := [ x : x in MinimalSubmodules( M : Limit := 4 )]; 
         if #mins ne numberofminsubs or  &+[ Dimension( x ) : x in mins ] ne dimg or 
-                __isonefactoromegaminus( mins, p ) then
+                __isonefactoromegaminus( mins ) then
             delete inv;
             gensC := [];
             gensCD := [];
@@ -220,18 +244,20 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
     ft2 := ClassicalForms( tf[2] : Scalars := true )`formType;
   
     if ft1 eq "orthogonalplus" or <ft1,ft2> eq <"orthogonalminus","orthogonalcircle"> then
-        print "Omega+ first";
         t1 := 1; t2 := 2;
         pm := IdentityMatrix( GF( q ), dT );
     else
-        print "Omega- or Omega first";
         t1 := 2; t2 := 1;
         pm := PermutationMatrix( GF( q ), Sym( dT )!
         Flat( [[z+k*dK : k in [0..dH-1]] : z in [1..dK]] ));
-        //error(111);
     end if; 
     
-    if ft1 eq "symplectic" then print "SYMPLECTIC!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; end if;
+    if ft1 eq "symplectic" then 
+        print "SYMPLECTIC!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; 
+        symp := true;
+    else 
+        symp := false;
+    end if;
 
     dt1 := Dimension( tf[t1] ); 
     dt2 := Dimension( tf[t2] );
@@ -241,7 +267,7 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
     /* the dimensions dt1 and dt2 of the tensor factors must be equal to 
        dH and dK in this order. If not, we must swap H and K. */
                                   
-    if dt1 ne dH then print "WRONG dt1";
+    if dt1 ne dH then 
         temp := dH; dH := dK; dK := temp;
         temp := dimH; dimH := dimK; dimK := temp;
         temp := ah; ah := ak; ak := temp;
@@ -278,6 +304,7 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
                    Scalars := true );
     formk := ClassicalForms( sub< Universe( gens1k ) | gens1k > : 
                    Scalars := true );
+
     sch := formh`scalars;
     sck := formk`scalars;
     typeh := case< formh`formType | "orthogonalplus": "Omega+", 
@@ -291,6 +318,7 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
                     "orthogonalcircle": "Omega",
                     default: false >;
 
+    print dH, typeh, dK, typek;
     // if both are Omega-, then make them Omega+
 /*    if typeh eq "Omega-" and typek eq "Omega-" then print "both Omega-";
         typeh := "Omega+"; typek := "Omega+"; print "CHANGE TYPEH!!!!!!!!!";
@@ -298,7 +326,6 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
         typeh := "Omega+"; print "CHANGE TYPEH!!!!!!!!!";
     end if;
 */
-    print dH, typeh, dK, typek;
                    
     // if a generator preseves the form module -1, then this is fixed.
     for i in [1..#sch] do
@@ -316,6 +343,37 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
       
     Th := TransformForm( sub< Universe( gens1h ) | gens1h > );
     Tk := TransformForm( sub< Universe( gens1k ) | gens1k > );
+
+    if typeh eq "Omega-" and typek eq "Omega" then
+        formcircle := ZeroMatrix( GF( q ), dK );
+        issq1 := IsSquare( GF(q)!(-1)^(dim div 2)*(1/2));
+        issq2 := IsSquare( GF(q)!(-1)^(dK div 2)*(1/2)*
+                Determinant( ClassicalForms( OmegaMinus( dH, q ))`bilinearForm));
+
+        if issq1 eq issq2 then
+            ww := 1/2;
+        else 
+            ww := 1/2*PrimitiveElement( GF( q ));
+        end if;
+
+        for i in [1..dK div 2] do 
+            formcircle[i,dK-i+1] := 1; formcircle[dK-i+1,i] := 1;
+        end for;
+        
+        formcircle[dK div 2+1, dK div 2+1] := ww;
+        trmat := TransformForm( formcircle, "orthogonalcircle" )^-1;
+    
+        Tk := GL(dK,q)!(Tk*trmat);
+    else 
+        ww := 1/2;
+    end if;
+    
+    AssignOmegaBasisFromComponents( ~G, dH, dK, GF( q ) : type := type, 
+                                                          typeh := typeh, 
+                                                          typek := typek,
+                                                          ww := ww );
+
+    //return sub< Universe( gens1k ) | gens1k >, Tk;
     
     tbas := TensorProduct( Th^-1, Tk^-1 )*tbas;
     gens1h := [ x^Th : x in gens1h ];
@@ -324,8 +382,7 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
     gens1h := [ GL(dimH,q)!__funcSLdqToSymSquare( x : type := typeh ) : 
                 x in gens1h ];
     gens2h := [ x@ah : x in gensCD ];
-    
-    gens1k := [ GL(dimK,q)!__funcSLdqToSymSquare( x : type := typek ) : 
+    gens1k := [ GL(dimK,q)!__funcSLdqToSymSquare( x : type := typek, ww := ww ) : 
                 x in gens1k ];
     gens2k := [ x@ak : x in gensCD ];
     
@@ -349,9 +406,9 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
                     i in [1..#gensCD] ];
         temp := dimK; dimK := dimH; dimH := temp;
         temp := mK; mK := mH; mH := temp;       
-    end if;
+    end if; 
 
-    assert vh and vk;
+    assert vh and vk; 
     
     M1H := GModule( sub< GL( dimH, q ) | gens1h >);
     M2H := GModule( sub< GL( dimH, q ) | gens2h >);
@@ -380,38 +437,68 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
     else 
         basOneDim := [ Zero( M )];
     end if;
+
+   // return basH, basK, basT, basOneDim;
             
     /* we place the basis vectors computed in bas1 and bas2 into their place
        in the basis of V */
     //bas1 := BuildBasisOmega( basH, basK, basT : wH := basOneDim[1] );
-    bas := BuildBasisOmega( basH, basK, basT : type := type, 
-                                               firsttype := typeh, 
-                                               wH := basOneDim[1] );
+    bas := BuildBasisOmega( G, basH, basK, basT : type := type, 
+                                               typeh := typeh, 
+                                               typek := typek,
+                                               wH := basOneDim[1], 
+                                               ww := ww );
     tr := GL( dimg, q )!bas;
-
     g := sub< SL( dimg, q ) | { bas*x*bas^-1 : x in Generators( G0 )}>;
     form := ClassicalForms( g )`bilinearForm;
     
     posT := funcpos_symsquare( dim, dim-dH div 2, dim : type := type );
     if pdivdim then posT := posT-1; end if;
-    if not IsSquare( 2*form[dH div 2+1,posT] ) then 
-        for i in [1..#basH] do 
-            pos := funcposinv_symsquare( dH, i : type := typeh );
-            if pos[1] le dH div 2 and pos[2] le dH div 2 then
-                basH[i] := z^2*basH[i];
-            elif pos[1] le dH div 2 and pos[2] gt dH div 2 then
-                basH[i] := z*basH[i];
-           end if;
-       end for;
-       
-       for i in [1..#basT/2] do 
-           basT[i] := z*basT[i];
-       end for;
-   end if; 
+    if not IsSquare( 2*form[dH div 2+1,posT] ) then
+        if typeh eq "Omega+" then 
+            for i in [1..#basH] do 
+                pos := funcposinv_symsquare( dH, i : type := typeh );
+                if pos[1] le dH div 2 and pos[2] le dH div 2 then
+                    basH[i] := z^2*basH[i];
+                elif pos[1] le dH div 2 and pos[2] gt dH div 2 then
+                    basH[i] := z*basH[i];
+                end if;
+            end for;
 
-   bas := BuildBasisOmega( basH, basK, basT : type := type, 
-                                              firsttype := typeh, 
-                                              wH := basOneDim[1] );
+            for i in [1..#basT/2] do 
+                basT[i] := z*basT[i];
+            end for; 
+        end if;
+
+        if typeh eq "Omega-" then  
+            trh := IdentityMatrix( GF( q ), dH );
+            for i in [1..dH div 2 -1 ] do 
+                trh[i,i] := -1;
+            end for;
+
+            m2 := Matrix( GF( q ), 2, 2, [-1,0,0,-1]);
+            t2 := TransformForm( m2, "orthogonalminus" );
+            
+            trh[dH div 2,dH div 2] := t2[1,1]; trh[dH div 2,dH div 2+1] := t2[1,2];
+            trh[dH div 2+1,dH div 2] := t2[2,1]; trh[dH div 2+1,dH div 2+1] := t2[2,2];
+
+            bas := BasisMatrixForSymSquareOmega( "Omega-", dH, GF(q));
+            trh1 := bas*__funcSLdqToSymSquare( trh )*bas^-1;
+            newbasH := [ &+[ trh1[i,j]*basH[j] : j in [1..#basH]] : 
+                            i in [1..#basH]];
+            basH := newbasH;
+
+            trT := TensorProduct( trh, IdentityMatrix( GF( q ), dK ) );
+            newbasT := [ &+[ trT[i,j]*basT[j] : j in [1..#basT]] : i in [1..#basT] ];
+            basT := newbasT;
+        end if;
+    end if; 
+
+   bas := BuildBasisOmega( G, basH, basK, basT : type := type, 
+                                              typeh := typeh, 
+                                              typek := typek,
+                                              wH := basOneDim[1], 
+                                              ww := ww );
    tr := GL( dimg, q )!bas;
    //return CD, tr;
    g := sub< SL( dimg, q ) | { bas*x*bas^-1 : x in Generators( G0 )}>;
@@ -426,7 +513,6 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
        posK2 := funcpos_symsquare( dim, dim-(dH div 2)-1,dim-(dH div 2) : type := type );
    end if;
 
-   print posK1, posK2;
    if pdivdim then posK2 := posK2 - 1; end if;
 
    vK := Sqrt( 2*form[posK1,posK2] )^-1; 
@@ -446,71 +532,79 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
        basT[i] := vT*basT[i];
    end for;
    
-   bas := BuildBasisOmega( basH, basK, basT : type := type, wH := basOneDim[1] ); 
+   bas := BuildBasisOmega( G, basH, basK, basT : type := type, 
+                                              typeh := typeh,
+                                              typek := typek,
+                                              wH := basOneDim[1], 
+                                              ww := ww ); 
    g := sub< SL( dimg, q ) | { bas*x*bas^-1 : x in Generators( G0 )}>;
+   //return CD, bas;
 
    if not pdivdim then 
 
         form := ClassicalForms( g )`bilinearForm;
-        b := form[dim,dim]; print "b is", b;
+        b := form[dim,dim];
         assert form[1,dimg] eq 1 and form[2,dimg-1] eq 1/2;
         P<x> := PolynomialRing( GF( q ));
+
         if type eq "Omega+" then 
-            auxmat := Basis( OmegaPlusSubspace( dH, dK, GF( q )));
-            auxmat := Matrix( GF( q ), #auxmat, #auxmat, auxmat );
-            lastindex := dim div 2;
-            vec := (auxmat^-1)[1]-(auxmat^-1)[lastindex];
-            u := vec[dH div 2]; v := vec[lastindex]; 
-            //auxmat1 := OmegaPlusBasis( dH, dK, GF( q )); error(1);
-            //lastindex1 := 209;
-            //vec1 := auxmat1[20];
-            //u := vec1[209];
-            //pol := -b+1+u*(x-1)+u^2*(dH div 2)/2*(x-1)^2;
+        
+            auxmat := BasisMatrixForSymSquareOmega( "Omega+", dH+dK, GF(q) )*
+            OmegaBasisFromComponents( G )^-1;
+            u := auxmat[dim,dimg]; v := auxmat[dim,dimg+1];
             pol := -b+1+(u-v)*(x-1)+(u^2*(dH div 2)/2+v^2*(dK div 2)/2)*(x-1)^2;
+        
         elif type eq "Omega-" then
-            auxmat := Basis( OmegaMinusSubspace( dH, dK, GF( q )));
-            auxmat := Matrix( GF( q ), #auxmat, #auxmat, auxmat );
-            lastindex := dim div 2+1;
-            vec := (auxmat^-1)[1]-(auxmat^-1)[lastindex];
-            u := vec[dH div 2]; v := vec[lastindex];
+        
+            auxmat := BasisMatrixForSymSquareOmega( "Omega-", dH+dK, GF(q) )*
+            OmegaBasisFromComponents( G )^-1;
+            u := auxmat[dim,dimg]; v := auxmat[dim,dimg+1];
             pol := -b+3/2+(u-v)*(x-1)+(u^2*(dH div 2)/2+v^2*(dK div 2)/2)*(x-1)^2;
+        
         elif type eq "Omega" and typeh eq "Omega+" then
-            auxmat := BasisMatrixForSymSquareOmega( dH+dK, GF(q) )*
-            OmegaPlusBasis( dH, dK, GF( q ) : type := "Omega" )^-1;
+        
+            auxmat := BasisMatrixForSymSquareOmega( "Omega", dH+dK, GF(q) )*
+            OmegaBasisFromComponents( G )^-1;
             u := auxmat[dim,dimg]; v := auxmat[dim,dimg+1]; 
             pol := -b+3/2 + 2*u*(x-1)*1/2+2*v*(x-1)*(-1/2)+u^2*(x-1)^2*(dH div 2)/2+
             v^2*(x-1)^2*(((dK-1) div 2)/2+1/4);
+        
         elif type eq "Omega" and typeh eq "Omega-" then
-            auxmat := BasisMatrixForSymSquareOmega( dH+dK, GF(q) )*
-            OmegaPlusBasis( dH, dK, GF( q ) : type := "Omega", firsttype := "Omega-" )^-1;
-            u := auxmat[dim,dimg]; v := auxmat[dim,dimg+1]; 
+        
+            
+            auxmat, vals := 
+                        OmegaBasisFromComponents( G );
+            aa := vals[1]; awH := vals[2]; awK := vals[3]; 
+            wHwH := vals[4]; wKwK := vals[5];
+            
+            print "parameters for pol", aa, awH, awK, wHwH, wKwK;
+            auxmat := BasisMatrixForSymSquareOmega( "Omega", dH+dK, GF(q) )*auxmat^-1;
+            u := auxmat[dim,dimg]; v := auxmat[dim,dimg+1]; print "u and v are", u, v;
+            // error(1);
+            //aa := 1; awH := 6; awK := 4; wHwH := 5; wKwK := 3;
+            pol := -b+aa+2*u*(x-1)*awH+2*v*(x-1)*awK+u^2*(x-1)^2*wHwH+v^2*(x-1)^2*wKwK;
+            print "pol is", pol;
+        
         end if;
 
-        roots := AllRoots( pol ); print roots;
-
+        roots := AllRoots( pol ); print roots; 
         basOneDim[1] := roots[1,1]^-1*basOneDim[1]; 
 
     end if;
-   /* The code for Omega- 
-   b := form[dim,dim];
-   vec := (auxmat^-1)[1]-(auxmat^-1)[dim div 2+1];
-   u := vec[dH div 2]; v := vec[dim div 2+1];
-       
-   P<x> := PolynomialRing( GF( q ));
-   //pol := -b+1+(8*u-8*v)*(x-1)+(4*u^2*(dH div 2)+4*v^2*(dK div 2))*(x-1)^2;
-   pol := -b+3/2+(u-v)*(x-1)+(u^2*(dH div 2)/2+v^2*(dK div 2)/2)*(x-1)^2;
-   roots := AllRoots( pol ); print roots;
 
-   basOneDim[1] := roots[1,1]^-1*basOneDim[1]; */ 
-
-   v, coeffs := TestBasisOmega( basH, basK, basT, basOneDim[1], basOneDim[1], G0 :
-                                type := type );  
+   v, coeffs := TestBasisOmega( G, basH, basK, basT, basOneDim[1], basOneDim[1], G0 :
+                                type := type, 
+                                typeh := typeh,
+                                typek := typek, 
+                                ww := ww );  
    assert v;     
-   print coeffs;
 
-   bas := BuildBasisOmega( basH, basK, basT : type := type, 
+   bas := BuildBasisOmega( G, basH, basK, basT : type := type, 
+                                              typeh := typeh,
+                                              typek := typek,
                                               wH := basOneDim[1], 
-                                              scalars := coeffs );
+                                              scalars := coeffs, 
+                                              ww := ww );
    tr := GL( dimg, GF( q ))!bas;
     // construct the maps between GL(dim,q) and G
     

@@ -16,6 +16,7 @@ RecogniseSymSquare( 12, 5, Omega+ ) various problem with SplitTensor
 Omega-, 10, 3: does not  find suitable involution
 
 Omega-, 12, q : vK := Sqrt( 2*form[posK1,posK2] )^-1; gives zero
+        PROBABLY SOLVED
 
 Omega( 9|11, q ): SplitTensor problem
         probable cause: trying to split tensor product in wrong order

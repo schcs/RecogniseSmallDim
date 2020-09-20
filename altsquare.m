@@ -5,6 +5,7 @@ import "auxfunctions.m": MyDerivedGroupMonteCarlo, IsSimilarModMinus1List,
   IsSimilarModScalar, SplitTensor, RandomInvolution, InvolutionWithProperty,
   IsSimilarToScalarMultiple;
 
+import "altsquare_sp.m": RecogniseAltSquareWithTensorDecompositionSp;
 
 // 2-dimensional recognition
 
@@ -99,10 +100,11 @@ end function;
 RecogniseAltSquareWithTensorDecomposition := function( G : 
                                          type := "SL", CheckResult := true )
     cputm := Cputime(); 
-    
     q := #CoefficientRing( G ); 
     dimg := Dimension( G );
-    dim := SolveAltSquareDimEq( dimg ); // the natural dimension of G
+    
+    // the natural dimension of G
+    dim := SolveAltSquareDimEq( dimg : type := type ); 
     vprint SymSquareVerbose: "# Recog AltSquare dim", dim;
     
     /* find an involution with sufficiently large minus one eigenspace and 
@@ -113,9 +115,14 @@ RecogniseAltSquareWithTensorDecomposition := function( G :
     eiglim2 := case< dim | 6: 8, default: (1/4)*dim^2 >; 
     // upper limit for eigenspace dim
       
+    if type eq "Omega-" and dim eq 12 then 
+        eiglim1 := 36;
+        eiglim2 := 36;
+    end if;
+      
     // set up property function for InvolutionWithProperty  
     propfunc := function( x )
-        dmin := Dimension( Eigenspace( x, -1 )); 
+        dmin := Dimension( Eigenspace( x, -1 ));  
         return dmin ge eiglim1 and dmin le eiglim2;
     end function;
         
@@ -125,8 +132,10 @@ RecogniseAltSquareWithTensorDecomposition := function( G :
     __compcheck := func< G, C, g | NumberOfGenerators( C ) ge NrGensCentInv >;
     
     gensC := []; gensCD := [];
+    
+    // the number of components in the irred decomp for the centralizer
+
     repeat   
-        
         if not assigned inv then 
             inv := InvolutionWithProperty( G, propfunc );
         end if;
@@ -136,23 +145,24 @@ RecogniseAltSquareWithTensorDecomposition := function( G :
                       NumberGenerators := NrGensCentInv,
                       DerivedLength := case< dim | 
                       8: 2, 9: 2, 10: 2, 11: 2, 12: 2, 18: 2, 
-                      default : 1 >);     
+                        default : 1 >);      
         gensC := gensC cat GeneratorsSequence( C );
         gensCD := gensCD cat GeneratorsSequence( CD );
         C := sub< Universe( gensC ) | gensC >;
         CD := sub< Universe( gensCD ) | gensCD >;
-        
         M := GModule( CD );
-        mins := [ x : x in MinimalSubmodules( M : Limit := 4 )];
-        
-        if #mins eq 2 then 
+        mins := [ x : x in MinimalSubmodules( M : Limit := 4 )]; 
+        print mins;  
+        if #mins eq 2 or 
+           ( type in { "Omega+", "Omega-", "Omega" } and #mins  ne 3 ) or 
+           ( type in { "Omega+", "Omega-", "Omega" } and 1 in { Dimension( x ) : x in mins }) then 
             delete inv; 
             gensC := [];
-            gensCD := [];
-        end if;
-        
-    until  #mins eq 3 and &+[ Dimension( x ) : x in mins ] eq dimg;
-
+            gensCD := []; 
+        end if; 
+    until  #mins eq 3 and &+[ Dimension( x ) : x in mins ] eq dimg and 
+           not 1 in { Dimension( x ) : x in mins };
+      
     vprint SymSquareVerbose: "#   Cent comput dim", dim, "took ", 
       Cputime()-cputm, #gensC, "gens used.";
       
@@ -161,9 +171,13 @@ RecogniseAltSquareWithTensorDecomposition := function( G :
          respectively. The third is isomorphic to U tensor W.  
          The two alt squares lie in one of the eigenspaces of inv. The tensor 
          lies in the other eigenspace. */
-    mplus := [ mins[x] : x in [1..3] | (M!mins[x].1)^inv eq M!mins[x].1 ];
-    mminus := [ mins[x] : x in [1..3] | (M!mins[x].1)^inv eq -M!mins[x].1 ];
-  
+    mplus := [ mins[x] : x in [1..3] | 
+               (M!mins[x].1)^inv eq M!mins[x].1 ];
+    mminus := [ mins[x] : x in [1..3] | 
+                (M!mins[x].1)^inv eq -M!mins[x].1 ];
+    
+    // in the case of Sp, etc, there is a one-dimensional component
+      
     if #mplus eq 2 then
         mH := mplus[1]; mK := mplus[2]; mT := mminus[1];
     else 
@@ -171,7 +185,8 @@ RecogniseAltSquareWithTensorDecomposition := function( G :
     end if;      
         
     dimH := Dimension( mH ); dimK := Dimension( mK ); dimT := Dimension( mT );
-    dH := SolveAltSquareDimEq( dimH ); dK := SolveAltSquareDimEq( dimK ); 
+    dH := SolveAltSquareDimEq( dimH ); 
+    dK := SolveAltSquareDimEq( dimK ); 
     dT := dH*dK;
     assert Dimension( mT ) eq dT;
     
@@ -213,7 +228,7 @@ RecogniseAltSquareWithTensorDecomposition := function( G :
    end for; 
    
    CD:= sub< Universe( gensCD ) | gensCD >;
-
+        
    /* Construct the image of CD in the tensor product component. It must be 
       isomorphic to the tensor product of the preimages of the 
       groups induced on the alt square components */
@@ -250,8 +265,8 @@ RecogniseAltSquareWithTensorDecomposition := function( G :
                   tbas*x@at*tbas^-1, dK, dH )[1] >;
     
     gens1h := [ GL(dimH,q)!__funcSLdqToAltSquare( x@ch ) : x in gensCD ];
-    gens2h := [ x@ah : x in gensCD ];
-
+    gens2h := [ x@ah : x in gensCD ]; 
+    
     gens1k := [ GL(dimK,q)!__funcSLdqToAltSquare( x@ck ) : x in gensCD ];
     gens2k := [ x@ak : x in gensCD ];
     
@@ -287,10 +302,8 @@ RecogniseAltSquareWithTensorDecomposition := function( G :
     M1K := GModule( sub< GL( dimK, q ) | gens1k >);
     M2K := GModule( sub< GL( dimK, q ) | gens2k >);
     
-    v, trmk := IsIsomorphic( M1K, M2K ); 
-    if not v then return gens1k, gens2k; end if;
-    assert v;
-        
+    v, trmk := IsIsomorphic( M1K, M2K ); assert v;
+    
     // bas1 is [e12,e13,...,e23,...,e{k-1}{k}]
     // bas2 is [e{k+1}{k+2},...,e{d-1}d]
       
@@ -329,13 +342,12 @@ RecogniseAltSquareWithTensorDecomposition := function( G :
     end for;
     
     tr := GL( dimg, q )![ Eltseq( x ) : x in bas ];
-    
     p12 := funcpos_altsquare( dim, 1, 2 );
     p13 := funcpos_altsquare( dim, 1, dH+1 );
     p23 := funcpos_altsquare( dim, 2, dH+1 );
     p14 := funcpos_altsquare( dim, 1, dH+2 );
     p34 := funcpos_altsquare( dim, dH+1, dH+2 );
-    
+
     repeat
         x := Random( G )^(tr^-1);
         mat1 := Matrix( GF( q ), 3, 3, [
@@ -356,7 +368,7 @@ RecogniseAltSquareWithTensorDecomposition := function( G :
           mm1[1,3] ne 0 and mm1[1,1] ne 0 and mm2[1,2] ne 0 and mm2[1,1] ne 0;
     
     mm2 := mm1[1,1]*mm2[1,1]^-1*mm2;
-    lambdasq := mm1[1,3]/mm2[1,2];
+    lambdasq := mm1[1,3]/mm2[1,2];  
         
     try 
       lambda := Sqrt( lambdasq ); 
@@ -384,7 +396,7 @@ RecogniseAltSquareWithTensorDecomposition := function( G :
               bas[pij] := z0*bas[pij];
           end for;
       end for;
-    end try;
+    end try; 
     
     tr := GL( dimg, q )![ Eltseq( x ) : x in bas ];
     
@@ -418,7 +430,7 @@ RecogniseAltSquareWithTensorDecomposition := function( G :
         vprint SymSquareVerbose: "# Check passed.";
     end if;
         
-    return true, a, b, tr;
+    return true, a, b, tr, CD;
 end function;
 
             
@@ -443,16 +455,11 @@ RecogniseAltSquareWithRecursion := function( G : type := "SL",
     // upper limit for eigenspace dim
       
     // set up property function for InvolutionWithProperty  
-    propfunc := function( x )
+    propfunc := function( x ) 
         dmin := Dimension( Eigenspace( x, -1 )); 
         return dmin ge eiglim1 and dmin le eiglim2;
     end function;
         
-    // completion checking function
-    
-    NrGensCentInv := 10; 
-    __compcheck := func< G, C, g | NumberOfGenerators( C ) ge NrGensCentInv >;
-    
     gensC := []; gensCD := [];
     flag_dim8 := case< dim | 8: false, default: true >;
                   
@@ -468,7 +475,6 @@ RecogniseAltSquareWithRecursion := function( G : type := "SL",
         if not assigned inv then
             inv := InvolutionWithProperty( G, propfunc );
         end if;
-        
         C := CentraliserOfInvolution( G, inv : 
                      CompletionCheck := __compcheck );  
         CD := MyDerivedGroupMonteCarlo( C : 
@@ -495,7 +501,7 @@ RecogniseAltSquareWithRecursion := function( G : type := "SL",
           
         flag_dim8 := dimg ne 8 or { Dimension( x ) : x in mins } in 
                        {{12,6},{6,16}};     
-               
+        print [ Dimension( x ) : x in mins ];
     until  #mins eq 3 and &+[ Dimension( x ) : x in mins ] eq dimg 
           and flag_dim8;
 
@@ -771,7 +777,7 @@ forward RecogniseAltSquare;
 intrinsic RecogniseAltSquare( G::GrpMat : 
             type := "SL", 
             CheckResult := true,
-            UseTensorDecomposition := false ) 
+            UseTensorDecomposition := true ) 
           -> BoolElt, Map, Map, GrpMatElt
                                                          
  {G should be matrix group conjugate to the alternating square representation
@@ -788,6 +794,17 @@ intrinsic RecogniseAltSquare( G::GrpMat :
   SL(d,q) with d=7 or d>8 the recursive version is called as default. 
   This choice can be overwritten by setting UseTensorDecomposition to be true.}                                                
   dim := Dimension( G );                         
+  p := Characteristic( CoefficientRing( G ));
+  
+  error if p eq 2, "the field cannot have characteristic 2";
+  error if type eq "Omega+" and dim lt 45, "Omega+ needs to have dimension at least 10"; 
+  error if type eq "Omega" and dim lt 45, "Omega needs to have dimension at least 9";
+  
+      
+  if type eq "Sp" then
+      return RecogniseAltSquareWithTensorDecompositionSp( G : 
+      CheckResult := CheckResult );
+  end if;
                                                                        
   // in small dimension, call other functions
   case dim: 
@@ -802,10 +819,10 @@ intrinsic RecogniseAltSquare( G::GrpMat :
   
   if UseTensorDecomposition then
       return RecogniseAltSquareWithTensorDecomposition( G : 
-                     CheckResult := CheckResult );
+                     CheckResult := CheckResult, type := type );
   else
       return RecogniseAltSquareWithRecursion( G : 
-              CheckResult := CheckResult );
+              CheckResult := CheckResult, type := type );
   end if;
   
 end intrinsic;

@@ -1,184 +1,249 @@
 import "smalldimreps.m":funcpos_symsquare, funcposinv_symsquare, 
-  SolveSymSquareDimEq, BasisMatrixForSymSquareOmegaPlus, 
-  BasisMatrixForSymSquareOmegaMinus, BasisMatrixForSymSquareOmega, 
+  SolveSymSquareDimEq, BasisMatrixForSymSquareOmega, 
   GetValueOmegaMinus;
 
 import "smalldimreps.m":__funcSymSquareToSLdq, __funcSLdqToSymSquare;
+basisfromcomprecf := recformat< bas : AlgMatElt, vals : SeqEnum >;
 
-// TO BE DELETED
+SymProd := function( vec1, vec2 )
 
-OmegaPlusSubspace := function( d1, d2, F )    
-    
-    d := d1 + d2;
-    V := VectorSpace( F, d div 2 );
-    
-    vecs := [];
-    
-    for i in [1..d1 div 2 - 1] do
-        v := Zero( V );
-        v[i] := 1; v[d1 div 2] := -1;
-        Append( ~vecs, v );
+    d := Dimension( Parent( vec1 ));
+    vec := [ 0 : x in [1..d*(d+1)/2]];
+    for i in [1..d] do
+        for j in [1..d] do
+            a := vec1[i]*vec2[j];
+            if a ne 0 then 
+                pos := funcpos_symsquare( d, i, j );
+                vec[pos] := vec[pos]+a;
+            end if;
+        end for;
     end for;
-    
-    Append( ~vecs, V!([1 : i in [1..d1 div 2]] cat 
-                [ 0 : i in [1..d2 div 2]]));
-    
-    for i in [1..d2 div 2-1] do
-        v := Zero( V );
-        v[d1 div 2 + i] := 1; v[d div 2] := -1;
-        Append( ~vecs, v );
-    end for;
-    
-        Append( ~vecs, V!([0 : i in [1..d1 div 2]] cat 
-                [ 1 : i in [1..d2 div 2]]));
-    
-    return VectorSpaceWithBasis( vecs );
+
+    return vec;
 end function;
 
-OmegaMinusSubspace := function( d1, d2, F )
+SymSquareBasis := function( bas )
 
-    d := d1 + d2;
-    V := VectorSpace( F, d div 2 + 1 );
-    
-    vecs := [];
-    
-    for i in [1..d1 div 2 - 1] do
-        v := Zero( V );
-        v[i] := 1; v[d1 div 2] := -1;
-        Append( ~vecs, v );
+    mat := [];
+    F := CoefficientRing( Parent( bas[1] ));
+    for i in [1..#bas] do
+        for j in [i..#bas] do
+            Append( ~mat, SymProd( bas[i], bas[j] ));
+        end for;
     end for;
-    
-    Append( ~vecs, V!([1 : i in [1..d1 div 2]] cat 
-                [ 0 : i in [1..d2 div 2+1]]));
-    
-    for i in [1..d2 div 2] do
-        v := Zero( V );
-        v[d1 div 2 + i] := 1; v[d div 2+1] := -1;
-        Append( ~vecs, v );
-    end for;
-    
-        Append( ~vecs, V!([0 : i in [1..d1 div 2]] cat 
-                [ 1 : i in [1..d2 div 2-1]] cat [1/2,1/2]));
-    
-    return VectorSpaceWithBasis( vecs );
+
+return Matrix( F, #mat, #mat[1], mat );
 end function;
 
-// end of TO BE DELETED
+TensorProdBasis := function( bas1, bas2 )
+    
+    mat := [];
+    F := CoefficientRing( Parent( bas1[1] ));
 
-OmegaPlusBasis := function( d1, d2, F : type := "Omega+", firsttype := "Omega+" )
+    for b1 in bas1 do
+        for b2 in bas2 do
+            Append( ~mat, SymProd( b1, b2 ));
+        end for;
+    end for;
 
+return Matrix( F, #mat, #mat[1], mat );
+end function;
+
+AssignOmegaBasisFromComponents := procedure( ~G, d1, d2, F : 
+                                    ww := 1/2,
+                                    type := "Omega+", 
+                                    typeh := "Omega+", 
+                                    typek := "Omega+" )
+    
     d := d1+d2;
-    ranged1 := [1..d1 div 2] cat [d-d1 div 2 + 1..d];
-    ranged2 := [d1 div 2 + 1 .. d-d1 div 2];
-    len := d*(d+1) div 2;
-    z1, z2 := GetValueOmegaMinus( #F );
+    q := #F;
+    V := VectorSpace( F, d );
 
-    mat := ZeroMatrix( F, len );
-    rowcount := 0;
-    mid := case< firsttype | "Omega+": <d1 div 2, d-d1 div 2 + 1>, 
-                             "Omega-": <d-d1 div 2 +1,d-d1 div 2 +1>,
-                             default: false >; 
-    posmid := funcpos_symsquare( d, mid[1], mid[2] );
-    midvalue := case< firsttype | "Omega+": -1, "Omega-": z1, default: false >;
+    if type eq "Omega" and typeh eq "Omega-" then 
+    
+        i1 := d1 div 2; i2 := (d1+d2) div 2 + 1; i3 := d1 div 2+d2+1;
+        v1 := V.i1; v2 := V.i2; v3 := V.i3;
+    
+        W := sub< V | v1, v2, v3 >;
 
-    for i in ranged1 do
-        for j in [ x : x in ranged1 | i le x ] do
-            if <i,j> ne mid then
-                pos, v := funcpos_symsquare( d, i, j );
-                rowcount := rowcount + 1;
-                mat[rowcount,pos] := 1;
-                if i+j eq d+1 and i ne d1/2 then
-                    mat[rowcount,posmid] := midvalue;
-                end if;
-                if firsttype eq "Omega-" and <i,j>  eq <d1 div 2, d1 div 2 > then 
-                    mat[rowcount,posmid] := midvalue;
-                end if;
-            end if;
-        end for;
-    end for;
-   
-   mid := case< type | "Omega+": <d div 2, d div 2 + 1 >,
-                       "Omega-": <d div 2+1, d div 2 + 1 >, 
-                       "Omega": <d div 2+1, d div 2 + 1 >,
-                       default: false >;
-   
-   minusval := case< type | "Omega+": -1, "Omega-": z1, "Omega": -2, default: false >;
-   posmid := funcpos_symsquare( d, mid[1], mid[2]);
-   for i in ranged2 do
-        for j in [ x : x in ranged2 | i le x ] do
-            if <i,j> ne mid then 
-                pos, v := funcpos_symsquare( d, i, j );
-                rowcount := rowcount + 1;
-                mat[rowcount,pos] := 1;
-                if i+j eq d+1 and i ne d/2 then
-                    mat[rowcount,posmid] := minusval;
-                end if;
-                if type eq "Omega-" and <i,j>  eq <d div 2, d div 2 > then 
-                        mat[rowcount,posmid] := minusval;
-                end if;
-            end if;
-        end for;
-    end for;
+        mat := ClassicalForms( OmegaMinus( 4, q ))`bilinearForm;
 
-    for i in ranged1 do 
-        for j in ranged2 do
-            rowcount := rowcount + 1;
-            pos, v := funcpos_symsquare( d, i, j );
-            mat[rowcount,pos] := 1;
-        end for;
-    end for;
+        w2w2 := ClassicalForms( OmegaMinus( 4, q ))`bilinearForm[3,3];
 
-    rowcount := rowcount + 1;
-    for i in [1..d1 div 2-1 ] do
-        pos := funcpos_symsquare( d, i, d-i+1 );
-        mat[rowcount,pos] := 1;
-    end for;
+        f3 := ZeroMatrix( F, 3, 3 );
+        f3[1,1] := 1;
+        f3[3,3] := w2w2;
+        f3[2,2] := ww;
 
-    if firsttype eq "Omega+" then 
-        pos := funcpos_symsquare( d, d1 div 2, d-d1 div 2 + 1 );
-        mat[rowcount,pos] := 1;
-    elif firsttype eq "Omega-" then 
-        pos := funcpos_symsquare( d, d1 div 2, d1 div 2  );
-        mat[rowcount,pos] := 1/2;
-        pos := funcpos_symsquare( d, d-d1 div 2+1, d - d1 div 2 + 1 );
-        mat[rowcount,pos] := z2;
-    end if; 
+        if q eq 7 then
+            tr := Matrix( F, 3, 3, [3,2,1,5,1,5,0,4,1]); 
+        else 
+            tr := TransformForm( f3, "orthogonalcircle" );
+        end if;
 
-    rowcount := rowcount + 1;
-    for i in [1..d div 2-1] do
-        pos := funcpos_symsquare( d, i, d-i+1 );
-        mat[rowcount,pos] := 1;
-    end for;
+        print "tr matrix is", tr;
+        print "ww is", ww;        
+        w1 := tr[1,1]*V.i1+tr[1,2]*V.i2+tr[1,3]*V.i3; 
+        w2 := tr[2,1]*V.i1+tr[2,2]*V.i2+tr[2,3]*V.i3; 
+        w3 := tr[3,1]*V.i1+tr[3,2]*V.i2+tr[3,3]*V.i3;
 
-    if type eq "Omega+" then 
-        pos := funcpos_symsquare( d, d div 2, d div 2 + 1 );
-        mat[rowcount,pos] := 1;
-        // TEMP FIX
-        mat[rowcount] := mat[rowcount] - mat[rowcount-1];
-    elif type eq "Omega-" then 
-        pos := funcpos_symsquare( d, d div 2, d div 2  );
-        mat[rowcount,pos] := 1/2;
-        pos := funcpos_symsquare( d, d div 2+1, d div 2+1  );
-        mat[rowcount,pos] := z2;
-        // TEMP FIX
-        mat[rowcount] := mat[rowcount] - mat[rowcount-1];
+        bas1 := [ V.i : i in [1..d1 div 2 - 1]] cat [w1,w3] cat 
+                [ V.i : i in [d-d1 div 2 + 2 .. d]];
+        bas2 := [ V.i : i in [d1 div 2+1 .. d div 2 ]] cat [w2] cat 
+                [ V.i : i in [d div 2 + 2 .. d-d1 div 2 ]];
+    
+    elif type eq "Omega+" and typeh eq "Omega-" then 
 
-    elif type eq "Omega" then 
-        pos := funcpos_symsquare( d, d div 2, d div 2+2  );
-        mat[rowcount,pos] := 1;
-        pos := funcpos_symsquare( d, d div 2+1, d div 2+1  );
-        mat[rowcount,pos] := 1;
-        // TEMP FIX !!!!
-        mat[rowcount] := mat[rowcount] - mat[rowcount-1];
+        error( "option not yet implemented" );
+
+    else 
+
+        bas1 := [ V.i : i in [1..d1 div 2 ]] cat [ V.i : i in [d-d1 div 2 + 1 .. d]];
+        bas2 := [ V.i : i in [d1 div 2+1 .. d-d1 div 2 ]];
+
     end if;
 
-    return mat;
+    basH := SymSquareBasis( bas1 );
+    basK := SymSquareBasis( bas2 );
+    basT := TensorProdBasis( bas1, bas2 );
+
+    dH := NumberOfRows( basH );
+    dK := NumberOfRows( basK );
+    dT := NumberOfRows( basT );
+
+    bom := BasisMatrixForSymSquareOmega( typeh, #bas1, F );
+    boc := BasisMatrixForSymSquareOmega( typek, #bas2, F : ww := ww );
+    basH := [&+[ bom[i,j]*basH[j] : j in [1..dH]] : i in [1..dH]];
+    basK := [&+[ boc[i,j]*basK[j] : j in [1..dK]] : i in [1..dK]];
+
+
+    bas := basH[1..dH-1] cat basK[1..dK-1] cat basT[1..dT] cat [basH[dH]] cat 
+            [basK[dK]];
+    
+    if type eq "Omega" and typeh eq "Omega-" then
+        
+        _form := function( i, j )
+            
+            if i+j eq d+1 and i ne (d+1) div 2 then 
+                return 1;
+            elif i eq (d+1) div 2 and j eq (d+1) div 2 then
+                return 1/2;
+            else 
+                return 0;
+            end if;
+        end function;
+
+        _formsymsquare := function( u, v )
+            
+            a := 0;
+
+            for i in [1..d*(d+1)/2] do 
+                for j in [1..d*(d+1)/2] do 
+                    if u[i] ne 0 and v[j] ne 0 then 
+                        pi := funcposinv_symsquare( d, i );
+                        pj := funcposinv_symsquare( d, j );
+                        a := a+u[i]*v[j]*( _form( pi[1], pj[1] )*_form( pi[2], pj[2] ) + 
+                                       _form( pi[1], pj[2] )*_form( pi[2], pj[1] ))/2;
+                    end if;
+                end for;
+            end for;
+
+            return a;
+        end function;
+
+        wH := basH[#basH];
+        wK := basK[#basK];
+        a := Zero( Parent( wH ));
+        a[d] := 1; a[funcpos_symsquare( d, (d+1) div 2, (d+1) div 2 )] := -2;
+
+        aa := _formsymsquare( a, a );
+        awH := _formsymsquare( a, wH );
+        awK := _formsymsquare( a, wK );
+        wHwH := _formsymsquare( wH, wH );
+        wKwK := _formsymsquare( wK, wK );  
+        
+    else 
+
+        aa := 0; awH := 0; awK := 0; wHwH := 0; wKwK := 0;            
+
+    end if;
+    
+    bas := Matrix( F, dH+dK+dT, dH+dK+dT, [ Eltseq( x ) : x in bas ]);
+    G`BasisMatrixFromComponents := rec< basisfromcomprecf | 
+                                bas := bas, vals := [ aa, awH, awK, wHwH, wKwK ]>;
+
+    // return bas, [aa, awH, awK, wHwH, wKwK];
+end procedure;
+
+OmegaBasisFromComponents := function( G )
+
+    return G`BasisMatrixFromComponents`bas, G`BasisMatrixFromComponents`vals;
+end function; 
+
+/* this function determines the orthogonal type of the large component of the 
+    symmetric square of Omega*( d, q ) */
+
+TypeOfSymSquareOmega := function( type, d, q )
+
+    if (type eq "Omega" and IsEven( d )) or 
+        (type in {"Omega+", "Omega-"} and IsOdd( d )) then 
+        return "false";
+    end if;
+
+    _, p := IsPrimePower( q );
+    nrrows := case< type  |
+        "Omega+": d div 2 - 1, "Omega-": d div 2+1, 
+        "Omega": (d-1) div 2, default: false >;
+
+    if d mod p eq 0 then nrrows := nrrows - 1; end if;
+
+    if IsOdd( nrrows ) then 
+        return "orthogonalcircle";
+    end if; 
+
+    if type eq "Omega+" then 
+        a := 1/2; b := 1;
+    elif type eq "Omega-" then
+        x := GetValueOmegaMinus( GF( q )); 
+        cf := ClassicalForms( OmegaMinus( 4, GF( q )))`bilinearForm;
+        a := x^2*cf[3,3]^2;
+        b := (1/2+x^2*cf[3,3]^2);
+        c := (cf[2,2]^2+x^2*cf[3,3]^2);
+    elif type eq "Omega" then 
+        a := 1;
+        b := 3/2;
+    end if;
+
+    mat := [ a : x in [1..nrrows^2]];
+    mat := Matrix( GF( q ), nrrows, nrrows, mat );
+    for i in [1..nrrows] do
+        mat[i,i] := b;
+    end for;
+
+    if type eq "Omega-" then 
+        mat[nrrows-1,nrrows-1] := c;
+        for i in [1..nrrows-1] do
+            mat[i,nrrows] := 0; mat[nrrows,i] := 0;
+        end for;
+        mat[nrrows,nrrows] := (cf[2,2]*cf[3,3]/2);
+    end if;
+
+    tr := TransformBilinearForm( mat );
+    if tr[nrrows div 2, nrrows div 2] eq 0 then
+        return "orthogonalplus";
+    else
+        return "orthogonalminus";
+    end if;
+
 end function;
 
-BuildBasisOmega := function( basH, basK, basT : type := "Omega+", 
-                                                firsttype := "Omega+", 
+
+BuildBasisOmega := function( G, basH, basK, basT : type := "Omega+", 
+                                                typeh := "Omega+",
+                                                typek := "Omega+", 
                                                 wH, wK, 
-                                                scalars := [1,1,1,1] )
+                                                scalars := [1,1,1,1],
+                                                ww := 1/2 )
 
     dH := SolveSymSquareDimEq( #basH : type := "Omega+" ); 
     dK := SolveSymSquareDimEq( #basK : type := "Omega+" );
@@ -207,11 +272,9 @@ BuildBasisOmega := function( basH, basK, basT : type := "Omega+",
     end if;
 
     basall := basH cat basK cat basT cat [ wH ] cat [ wK ];
-    mat := OmegaPlusBasis( dH, dK, GF( q ) : type := type, firsttype := firsttype );
-    M0 := case< type | "Omega+": BasisMatrixForSymSquareOmegaPlus( dH+dK, GF(q) ),
-                       "Omega-": BasisMatrixForSymSquareOmegaMinus( dH+dK, GF(q) ),
-                       "Omega":  BasisMatrixForSymSquareOmega( dH+dK, GF(q) ),
-                       default: false >;
+    mat := OmegaBasisFromComponents( G );
+                
+    M0 := BasisMatrixForSymSquareOmega( type, dH+dK, GF( q ));
     mat := M0*mat^-1; 
     bas := [ &+[ mat[i,j]*basall[j] : j in [1..#basall]] : i in [1..#basall-1]];
 
@@ -227,21 +290,22 @@ BuildBasisOmega := function( basH, basK, basT : type := "Omega+",
 end function;
 
 
-TestBasisOmega := function( basH, basK, basT, wH, wK, g : type := "Omega+" )
-    
+TestBasisOmega := function( G, basH, basK, basT, wH, wK, g : type := "Omega+", 
+                                                          typeh := "Omega+", 
+                                                          typek := "Omega+",
+                                                          ww := ww )
+
+    F := CoefficientRing( g );    
     scalars := [ <a,b,c,d > : a in [1,-1], b in [1,-1], c in [1,-1], 
-                 d in [1,-1]]; 
+                 d in [ x : x in F | x in [1,-1] ]]; 
     results := [];
     maxzero := 0;
-    F := CoefficientRing( g );
-    BuildBasis := case< type | "Omega+": BuildBasisOmega,
-                               "Omega-": BuildBasisOmega,
-                               "Omega": BuildBasisOmega, 
-                               default: false >;
-
     for s in scalars do 
-        bas := BuildBasis( basH, basK, basT : wH := wH, type := type,
-                       scalars := [s[1], s[2], s[3], s[4]] );
+        bas := BuildBasisOmega( G, basH, basK, basT : wH := wH, 
+                                              type := type,
+                                              typeh := typeh,
+                                              typek := typek,
+                                 scalars := [s[1], s[2], s[3], s[4]], ww := ww );
         x0 := Random( g );
         try
           x := bas*x0*bas^-1;

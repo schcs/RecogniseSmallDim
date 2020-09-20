@@ -1,14 +1,20 @@
-// aux functions for small dim recognition
+import "greenhill.m":__funcAltSquareToSLdq_func;
 
+// aux functions for small dim recognition
 // solve the equation m = d(d+1)/2
   
 SolveSymSquareDimEq := function( m : type := "SL" )
     
-    if type eq "Omega+" then
+    if type in { "Omega+", "Omega-", "Omega" } then
         m := m+1;
     end if;
   
     sol := (-1+Sqrt( 1+8*m ))/2;
+    
+    if sol ne Round( sol ) and type in {"Omega+", "Omega-", "Omega"} then
+        m := m+1;
+        sol := (-1+Sqrt( 1+8*m ))/2;
+    end  if;
     
     if sol ne Round( sol ) then
         return 0;
@@ -20,9 +26,18 @@ end function;
     
 // solve the equation m = d(d-1)/2
   
-SolveAltSquareDimEq := function( m )
-    
+SolveAltSquareDimEq := function( m : type := "SL"  )
+
+    if type eq "Sp" then
+        m := m+1;
+    end if;
+      
     sol := (1+Sqrt( 1+8*m ))/2;
+    
+    if sol ne Round( sol ) and type eq "Sp" then
+        m := m+1;
+        sol := (1+Sqrt( 1+8*m ))/2;
+    end  if;
     
     if sol ne Round( sol ) then
         return 0;
@@ -36,30 +51,140 @@ end function;
 /* position of basis element eij in the standard basis of the 
    sym square module. */
   
-funcpos_symsquare := function( dim, i, j )
-    return Round( (i-1)*dim-i*(i-3)/2 )+j-i; 
-end function;
-    
-/* position of basis element eij in the standard basis of the 
-   alt square module. */
-  
-funcpos_altsquare := function( dim, i, j )
-    
-    if i lt j then
-        return Round( Round((2*dim-i)*(i-1)/2)+j-i);
-    elif j lt i then
-        return Round( Round((2*dim-j)*(j-1)/2)+i-j);
-    else
-        return 0;
+funcpos_symsquare := function( dim, i, j : type := "SL" )
+
+    if i gt j then 
+        tmp := i; i := j; j := tmp;
     end if;
+
+    pos := Round( (i-1)*dim-i*(i-3)/2 )+j-i;
+    
+    if type eq "SL" then return pos, true; end if;
+
+    if type eq "Omega+" then
+        if i eq dim/2 and j eq dim/2+1 then
+            return 0, false;
+        elif i ge dim/2 and j ge dim/2+1 then
+            return pos-1, false;
+        elif i + j eq dim +1 then
+            return pos, true;
+        else
+            return pos, false;
+        end if;
+    end if;            
+
+    if type eq "Omega-" then
+        if i eq dim/2+1 and j eq dim/2+1 then
+            return 0, false;
+        elif i ge dim/2+1 and j ge dim/2+1 then
+            return pos-1, false;
+        elif (i lt dim/2 and i + j eq dim +1) or (i eq dim/2 and j eq dim/2) then
+            return pos, true;
+        else
+            return pos, false;
+        end if;
+    end if;            
+    
+    if type eq "Omega" then
+        if i eq (dim+1)/2 and j eq (dim+1)/2 then
+            return 0, false;
+        elif i ge (dim+1)/2 and j ge (dim+1)/2 then
+            return pos-1, false;
+        elif (i lt (dim+1)/2 and i + j eq dim +1) then
+            return pos, true;
+        else
+            return pos, false;
+        end if;
+    end if;            
+     
 end function;
 
 // the inverse of the last function
 
-funcposinv_altsquare := function( dim, i )
+funcposinv_symsquare := function( dim, i : type := "SL" )
+    
+    if type eq "Omega+" then
+        i0 := funcpos_symsquare( dim, dim/2, dim/2+1 );
+        if i ge i0 then
+            i := i+1;
+        end if;
+    elif type eq "Omega-" then
+        i0 := funcpos_symsquare( dim, dim/2+1, dim/2+1 );
+        if i ge i0 then
+            i := i+1;
+        end if;
+    end if;
+    
+    k := 0;        
+    while k*(2*dim-k+1)/2 lt i do
+        k := k+1;
+        if k gt dim*(dim+1)/2 then
+            return false;
+        end if;
+    end while;
+
+    flag := false;    
+    if type eq "Omega+" and k+i-(k-1)*(2*dim-k)/2 eq dim+1 then
+        flag := true;
+    elif type eq "Omega-" and (k lt dim/2 and (k+i-(k-1)*(2*dim-k)/2) eq dim+1) or 
+                            (k eq dim/2 and i-(k-1)*(2*dim-k)/2 eq dim/2) then
+        flag := true;
+    end if;
+
+    return <k,i-(k-1)*(2*dim-k) div 2>, flag;
+end function;
+
+/* position of basis element eij in the standard basis of the 
+   alt square module. */
+  
+funcpos_altsquare := function( dim, i, j : type := "SL" )
+    
+    if i lt j then
+        pos := Round( Round((2*dim-i)*(i-1)/2)+j-i);
+    elif j lt i then
+        pos := Round( Round((2*dim-j)*(j-1)/2)+i-j);
+    else
+        pos := 0;
+    end if;
+    
+    // in the case of SL the position is calculated
+    
+    if type eq "SL" then return pos; end if;
+    
+    /* in the case of Sp the position needs modifying
+       in this case we also return two values to indicate when
+       a standard basis element is of the form <i,j> - <d/2,d/2+1>
+       also remember that <d/2,d/2+1> does not occur in the standard 
+       basis and so after this element the positions need shifting.
+       */                            
+    
+    if type eq "Sp" then
+        if i eq dim/2 and j eq dim/2+1 then
+            return 0, false;
+        elif i ge dim/2 and j gt dim/2+1 then
+            return pos-1, false;
+        elif i + j eq dim +1 then
+            return pos, true;
+        else
+            return pos, false;
+        end if;
+    end if;            
+    
+end function;
+
+// the inverse of the last function
+
+funcposinv_altsquare := function( dim, i : type := "SL" )
     
     k := 0;
     
+    if type eq "Sp" then
+        i0 := funcpos_altsquare( dim, dim/2, dim/2+1 );
+        if i ge i0 then
+            i := i+1;
+        end if;
+    end if;
+        
     while k*(dim-(k+1)/2) lt i do
         k := k+1;
         if k gt dim*(dim-1)/2 then
@@ -67,17 +192,199 @@ funcposinv_altsquare := function( dim, i )
         end if;
     end while;
     
-    return <k,k+i-(k-1)*(dim-(k)/2)>;
+    if type eq "SL" then
+        return <k,k+i-(k-1)*(dim-(k)/2)>;
+    elif type eq "Sp" and k+k+i-(k-1)*(dim-(k)/2) eq dim+1 then
+        return <k,k+i-(k-1)*(dim-(k)/2)>, true;
+    elif type eq "Sp" and k+k+i-(k-1)*(dim-(k)/2) ne dim+1 then
+        return <k,k+i-(k-1)*(dim-(k)/2)>, false;
+    end if;
+    
 end function;
 
+forward __funcSLdqToSymSquare;
+
+GetValueOmegaMinus := function( q )
+
+    g0 := OmegaMinus( 4, q );
+    g := sub< GL( 10, q ) | __funcSLdqToSymSquare( g0.1 ), 
+                            __funcSLdqToSymSquare( g0.2 )>;
+    M := GModule( g );
+    subs := Submodules( M );
+
+    m := subs[3]; assert Dimension( m ) eq 9;
+    v := M!m.4; assert v[4] eq 1 and v[2] eq 0;
+    
+    return v[8], (M!subs[2].1)[8];
+end function;
+
+// tha basis transform matrix for sym square of Omega+
+
+BasisMatrixForSymSquareOmegaPlus := function( d, F )    
+    
+    d1 := (d*(d+1)) div 2;
+    bas := IdentityMatrix( F, d1 );
+        
+    for i in [1..d/2-1] do  
+        bas[funcpos_symsquare( d, i, d-i+1 ), 
+            funcpos_symsquare( d, d div 2,d div 2+1 )] := -1;
+    end for;
+    
+    for i in [1..d/2-1] do
+        bas[funcpos_symsquare( d, d div 2,d div 2+1 ),
+            funcpos_symsquare( d, i, d-i+1 )] := 1;
+    end for;
+
+    if d mod Characteristic( F ) eq 0 then 
+        bas[funcpos_symsquare( d, d div 2-1,d div 2+2 ), 
+            funcpos_symsquare( d, d div 2,d div 2+1 )] := 0;
+    end if;
+        
+    // reorder the basis
+      
+    if d mod Characteristic( F ) ne 0 then
+        list := [1..funcpos_symsquare( d, d div 2,d div 2+1 )-1] cat 
+                [funcpos_symsquare( d, d div 2,d div 2+1 )+1..d1] cat 
+                [funcpos_symsquare( d, d div 2,d div 2+1 )];
+    else
+        list := [1..funcpos_symsquare( d,d div 2-1,d div 2+1)] cat 
+                [funcpos_symsquare( d,d div 2-1,d div 2+3)
+                 ..funcpos_symsquare( d, d div 2,d div 2+1 )-1] cat 
+                [funcpos_symsquare( d, d div 2,d div 2+1 )+1..d1] cat 
+                [funcpos_symsquare( d, d div 2,d div 2+1 )] cat
+                [funcpos_symsquare( d, d div 2-1,d div 2+2 )];
+    end if;
+
+    sw := PermutationMatrix( F, Sym( d1 )!list );
+    bas := sw*bas;
+    
+    return bas;
+end function;
+
+// basis transform matrix for SymSquare Omega-
+
+BasisMatrixForSymSquareOmegaMinus := function( d, F )    
+    
+    d1 := (d*(d+1)) div 2;
+    bas := IdentityMatrix( F, d1 );
+    
+    z1, z2 := GetValueOmegaMinus( #F );
+    for i in [1..d/2-1] do  
+        bas[funcpos_symsquare( d, i, d-i+1 ), 
+            funcpos_symsquare( d, d div 2+1,d div 2+1 )] := z1;
+    end for;
+    
+    bas[funcpos_symsquare( d, d div 2, d div 2 ), 
+            funcpos_symsquare( d, d div 2+1,d div 2+1 )] := z1;
+    
+
+    for i in [1..d/2-1] do
+        bas[funcpos_symsquare( d, d div 2+1,d div 2+1 ),
+            funcpos_symsquare( d, i, d-i+1 )] := 1;
+    end for;
+
+    bas[funcpos_symsquare( d, d div 2+1,d div 2+1 ),
+            funcpos_symsquare( d, d div 2, d div 2 )] := 1/2;
+
+    if d mod Characteristic( F ) eq 0 then 
+        bas[funcpos_symsquare( d, d div 2+1,d div 2+1 ),
+                funcpos_symsquare( d, d div 2+1, d div 2+1 )] := (d div 2-1+1/2)*z1;
+    else 
+        bas[funcpos_symsquare( d, d div 2+1,d div 2+1 ),
+                funcpos_symsquare( d, d div 2+1, d div 2+1 )] := z2;
+    end if;
+
+    if d mod Characteristic( F ) eq 0 then  
+        bas[funcpos_symsquare( d, d div 2,d div 2 ), 
+            funcpos_symsquare( d, d div 2+1,d div 2+1 )] := 0;
+    end if;
+
+    // reorder the basis
+
+    if d mod Characteristic( F ) ne 0 then  
+        list := [1..funcpos_symsquare( d, d div 2+1,d div 2+1 )-1] cat 
+                    [funcpos_symsquare( d, d div 2+1,d div 2+1 )+1..d1] cat 
+                    [funcpos_symsquare( d, d div 2+1,d div 2+1 )];
+    else
+        list := [1..funcpos_symsquare( d, d div 2,d div 2 )-1] cat
+                [funcpos_symsquare( d, d div 2,d div 2 )+1..
+                funcpos_symsquare( d, d div 2+1,d div 2+1 )-1] cat 
+                    [funcpos_symsquare( d, d div 2+1,d div 2+1 )+1..d1] cat
+                    [funcpos_symsquare( d, d div 2,d div 2 )] cat
+                    [funcpos_symsquare( d, d div 2+1,d div 2+1 )];
+    end if;
+        
+    sw := PermutationMatrix( F, Sym( d1 )!list );
+    bas := sw*bas;
+    
+    return bas;
+end function;
+
+// basis matrix for Sym square of Omega
+
+BasisMatrixForSymSquareOmegaCircle := function( d, F : ww := 1/2 );    
+    
+    a := F!(-1/ww); b := 1/(2*ww);
+    d1 := (d*(d+1)) div 2;
+    bas := IdentityMatrix( F, d1 );
+        
+    for i in [1..(d-1)/2] do  
+        bas[funcpos_symsquare( d, i, d-i+1 ), 
+            funcpos_symsquare( d, (d+1) div 2,(d+1) div 2 )] := a;
+    end for;
+    
+    for i in [1..(d-1)/2] do
+        bas[funcpos_symsquare( d, (d+1) div 2,(d+1) div 2 ),
+            funcpos_symsquare( d, i, d-i+1 )] := 1;
+    end for;
+
+    bas[funcpos_symsquare( d, (d+1) div 2, (d+1) div 2 ),
+        funcpos_symsquare( d, (d+1) div 2, (d+1) div 2 )] := b;
+
+    if d mod Characteristic( F ) eq 0 then  
+        bas[funcpos_symsquare( d, (d-1) div 2,(d-1) div 2 +2 ), 
+            funcpos_symsquare( d, (d+1) div 2, (d+1) div 2 )] := 0;
+    end if;
+        
+    // reorder the basis
+      
+    if d mod Characteristic( F ) ne 0 then 
+        list := [1..funcpos_symsquare( d, (d+1) div 2,(d+1) div 2 )-1] cat 
+                    [funcpos_symsquare( d, (d+1) div 2, (d+1) div 2 )+1..d1] cat 
+                    [funcpos_symsquare( d, (d+1) div 2,(d+1) div 2 )];
+
+    else 
+        list := [1..funcpos_symsquare( d, (d-1) div 2,(d-1) div 2 +2 )-1] cat 
+                [funcpos_symsquare( d, (d-1) div 2,(d-1) div 2 +2 )+1..
+                funcpos_symsquare( d, (d+1) div 2, (d+1) div 2 )-1] cat 
+                [ funcpos_symsquare( d, (d+1) div 2, (d+1) div 2 )+1..d1 ] cat 
+                [ funcpos_symsquare( d, (d-1) div 2,(d-1) div 2 +2 ), 
+                  funcpos_symsquare( d, (d+1) div 2, (d+1) div 2 ) ];
+    end if;
+        
+    sw := PermutationMatrix( F, Sym( d1 )!list );
+    bas := sw*bas;
+    
+    return bas;
+end function;
+
+BasisMatrixForSymSquareOmega := function( type, d, F : ww := 1/2 )
+
+    return case< type |
+            "Omega+": BasisMatrixForSymSquareOmegaPlus( d, F ),
+            "Omega-": BasisMatrixForSymSquareOmegaMinus( d, F ),
+            "Omega": BasisMatrixForSymSquareOmegaCircle( d, F : ww := ww ),
+            default: false >;
+end function;
 
 // the image of a matrix in SL( d, q ) in the sym square module.
   
-__funcSLdqToSymSquare := function( g )
+__funcSLdqToSymSquare := function( g : type := "SL", ww := 1/2 )
     
     d := NumberOfRows( g );
+    F := CoefficientRing( g );
     msets := [ [i,j] : i, j in [1..d] | i le j ];
-    
+    d1 := #msets;
     newmat := [];
     
     for p1 in msets do
@@ -92,32 +399,63 @@ __funcSLdqToSymSquare := function( g )
         end for;
         newmat[#newmat+1] := newrow;
     end for;
-    
+
+    newmat := GL( d1, F )!newmat;
+
+    if type in { "Omega+", "Omega-", "Omega" } then
+        conj := BasisMatrixForSymSquareOmega( type, d, F : ww := ww );
+        codim := case< d mod Characteristic( F ) | 0: 2, default: 1>;
+        newmat := conj*newmat*conj^-1; 
+        newmat := [ newmat[i,j] : i, j in [1..d1-codim]];
+        newmat := GL( d1-codim, F )!newmat;
+    end if;
+
     return newmat;
 end function;
-    
+
 /* the preimage of a matrix acting in the sym square module in the natural
    basis in SL( d, q )  */
     
-__funcSymSquareToSLdq := function( g )
+__funcSymSquareToSLdq := function( g : type := "SL", ww := 1/2 )
     
-    q := #CoefficientRing( g );
+    F := CoefficientRing( g );
+    q := #F;
+    dimg := NumberOfRows( g );
+    dim := SolveSymSquareDimEq( dimg : type := type );
+
+    if type in { "Omega+", "Omega-", "Omega" } then 
+        gg := [ [ g[i,j] : j in [1..dimg]] : i in [1..dimg]];
+        for i in [1..dimg] do
+            gg[i][dimg+1] := 0;
+            if dim mod Characteristic( F ) eq 0 then 
+                gg[i][dimg+2] := 0;
+            end if;
+        end for;
+    
+        gg[dimg+1] := [0 : i in [1..dimg]] cat [1];
+       
+        if dim mod Characteristic( F ) eq 0 then
+            gg[dimg+1] := [0 : i in [1..dimg]] cat [1,0];
+            gg[dimg+2] := [0 : i in [1..dimg+1]] cat [1];
+        else 
+            gg[dimg+1] := [0 : i in [1..dimg]] cat [1];
+        end if;
+
+        gg := GL( #gg, q )!gg;
+        conj := BasisMatrixForSymSquareOmega( type, dim, GF( q ) : ww := ww );
+        g := conj^-1*gg*conj;      
+        dimg := NumberOfRows( g );
+    end if;
+
+    omegaflag := type in { "Omega+", "Omega-", "Omega" } and 
+                dim mod Characteristic( F ) eq 0;
+
+    listii := [ funcpos_symsquare( dim, i, i ) : i in [1..dim]];
+   
+    A := [[]];
     
     //recover the first row
-      
-    dimg := NumberOfRows( g );
-    dim := SolveSymSquareDimEq( dimg );
-    
-    listii := [ Round( (i-1)*dim-i*(i-3)/2 ) : i in [1..dim]];
-   
-    funcel := function( k )
-        i := Maximum( [ x  : x in [1..dim] | listii[x] le k ] );
-        return i, k-listii[i]+i;
-    end function;
-
-    A := [ [] ];
-    
-    i0 := Position( [ g[1,x] ne 0 : x in listii ], true );
+    i0 := Position( [ g[1,x] ne 0 : x in listii ], true ); 
     for i in [1..i0-1] do
         A[1,i] := GF(q)!0;
     end for;
@@ -127,37 +465,134 @@ __funcSymSquareToSLdq := function( g )
     for i in [1..dim-i0] do
         A[1,i0+i] := 1/2*g[1,listii[i0]+i]/A[1,i0];
     end for;
-    
+
+    if omegaflag then 
+        v := exists(x){ x : x in [1..dim-1] | x ne i0 and A[1,x] ne 0 }; 
+        assert v;
+        A[1,dim-i0+1] := 1/2*g[1,funcpos_symsquare( dim, x, dim-i0+1 )]/A[1,x];
+    end if;
+
     // get the other rows
     // solve a system of linear equations
         
-    mat := ZeroMatrix( GF( q ), dimg, dim );
-      
+    if omegaflag and type eq "Omega+" then
+        fbdn := [ funcpos_symsquare( dim, i, dim-i+1 ) : i in [1..dim/2]];
+    elif omegaflag and type eq "Omega-" then 
+        fbdn := [ funcpos_symsquare( dim, i, dim-i+1 ) : i in [1..dim/2-1]] cat 
+                [ funcpos_symsquare( dim, dim div 2, dim div 2 ),
+                funcpos_symsquare( dim, dim div 2+1, dim div 2+1 )];
+    elif omegaflag and type eq "Omega" then 
+        fbdn := [ funcpos_symsquare( dim, i, dim-i+1 ) : i in [1..(dim-1) div 2]] cat
+                [ funcpos_symsquare( dim, (dim+1) div 2, (dim+1) div 2 )];
+    else 
+        fbdn := [];
+    end if;
+
+    mat := ZeroMatrix( GF( q ), dimg-#fbdn, dim );
+    indrow := 0;
     for i in [1..dimg] do
-        i0, j0 := funcel( i );
+        if i in fbdn then continue; end if;
+        indrow := indrow + 1;
+        x := funcposinv_symsquare( dim, i );
+        i0 := x[1]; j0 := x[2];
         if i0 eq j0 then
-            mat[i,i0] := A[1,i0];
+            mat[indrow,i0] := A[1,i0];
         else
-            mat[i,i0] := A[1,j0];
-            mat[i,j0] := A[1,i0];
+            mat[indrow,i0] := A[1,j0];
+            mat[indrow,j0] := A[1,i0];
         end if;
     end for;
-    
-    
+        
     for i in [2..dim] do
-        vec := Vector( GF( q ), dimg, [g[i,j] : j in [1..dimg]] );
+        if omegaflag and i eq dim then break; end if;
+        vec := Vector( GF( q ), dimg-#fbdn, [g[i,j] : j in [1..dimg] | not j in fbdn ] );
         try sol := Solution( Transpose( mat ), vec ); 
         catch e return false; end try;
         A[i] := Eltseq( sol );
     end for;
     
-    return A;
-end function;
+    if omegaflag then
+        mat := ZeroMatrix( GF( q ), dimg-#fbdn, dim );
+      
+        indrow := 0;
+        for i in [1..dimg] do
+            if i in fbdn then continue; end if;
+            indrow := indrow + 1;
+            x := funcposinv_symsquare( dim, i );
+            i0 := x[1]; j0 := x[2];
+            if i0 eq j0 then
+                mat[indrow,i0] := A[2,i0];
+            else
+                mat[indrow,i0] := A[2,j0];
+                mat[indrow,j0] := A[2,i0];
+            end if;
+        end for;
 
-__funcSLdqToAltSquare := function( g )
+        vec := Vector( GF( q ), dimg-#fbdn, [g[2*dim-1,j] : j in [1..dimg] | 
+                                            not j in fbdn ] );
+        sol := Solution( Transpose( mat ), vec ); 
+        A[dim] := Eltseq( sol );
+    end if;
+
+    return Matrix( GF( q ), dim, dim, A );
+end function;
+    
+/* the following function produces the basis of 
+   the underyling vector space of Sp( d, q ) that reflects the
+   direct decompisition into 1-dim and 1-codim components. */
+    
+BasisMatrixForAltSquareSp := function( d, F )    
+    
+    d1 := Binomial( d, 2 );
+    bas := IdentityMatrix( F, d1 );
+        
+    for i in [1..d/2-1] do
+        bas[funcpos_altsquare( d, i, d-i+1 ), 
+            funcpos_altsquare( d, d/2,d/2+1 )] := -1;
+    end for;
+    
+    for i in [1..d/2-1] do
+        bas[funcpos_altsquare( d, d/2,d/2+1 ),
+            funcpos_altsquare( d, i, d-i+1 )] := 1;
+    end for;
+    
+    if d mod Characteristic( F ) eq 0 then 
+        bas[funcpos_altsquare( d, d/2-1,d/2+2 ), 
+            funcpos_altsquare( d, d/2,d/2+1 )] := 0;
+    end if;
+    
+    // reorder the basis
+      
+    if d mod Characteristic( F ) ne 0 then     
+        list := [1..funcpos_altsquare( d, d/2,d/2+1 )-1] cat 
+                [funcpos_altsquare( d, d/2,d/2+1 )+1..d1] cat 
+                [funcpos_altsquare( d, d/2,d/2+1 )];
+    else 
+        list := [1..funcpos_altsquare( d,d/2-1,d/2+1)]
+                cat [funcpos_altsquare( d,d/2-1,d/2+3)
+                     ..funcpos_altsquare( d, d/2,d/2+1 )-1] cat 
+                [funcpos_altsquare( d, d/2,d/2+1 )+1..d1] cat 
+                [funcpos_altsquare( d, d/2,d/2+1 )] cat
+                [funcpos_altsquare( d, d/2-1,d/2+2 )];
+    end if;
+    
+    sw := PermutationMatrix( F, Sym( d1 )!list );
+    bas := sw*bas;
+    
+    return bas;
+end function;
+    
+    
+/* writes the exterior square of an element of SX(d,q)     
+   the standard basis for this procedure is, in the case of SL,
+   v1.v2,...,v1.vd,v2.v3,...,v[d-1].vd */
+    
+__funcSLdqToAltSquare := function( g : type := "SL" )
                          
     d := NumberOfRows( g );
     msets := [ [i,j] : i, j in [1..d] | i lt j ];
+    d1 := #msets;
+    F := CoefficientRing( g );
     
     newmat := [];
     
@@ -169,39 +604,128 @@ __funcSLdqToAltSquare := function( g )
         end for;
         newmat[#newmat+1] := newrow;
     end for;
+        
+    newmat := Matrix( F, d1, d1, newmat );    
     
-    return Matrix( CoefficientRing( g ), #newmat, #newmat,  newmat );
+    /* In the case of Sp, the exterior square module is not irreducible.
+       It always has a 1-dimensional component. When char F does not 
+       divide the original dimension, then there is also a component
+       of codimension 1.
+         
+       The dimension-1 component is generated by v1.vd+v2.v[d-1]+...+vd.v[d+1].
+       The codimension-1 component when exists is generated by 
+       v1.v2...v1.v[d-1],v1.vd-v[d/2].v[d/2+1],
+       v2.v3,...,v2.vd-v[d/2].v[d/2+1],  
+       v[d/2-1].v[d/2],...,v[d/2-1].v[d]-v[d/2].v[d/2+1]
+       v[d/2+1].v[d/2+2],v[d/2+1].v[d],
+       ...
+       v[d-1].v[d]. */;  
+         
+    
+    if type eq "Sp" then
+        codim := case< d mod Characteristic( F ) | 0: 2, default: 1>;
+        conj := BasisMatrixForAltSquareSp( d, F );
+        newmat := conj*newmat*conj^-1;
+        newmat := Matrix( F, d1-codim, d1-codim, 
+                  [[ newmat[i,j] : j in [1..d1-codim] ] : i in [1..d1-codim]]);
+    end if; 
+            
+    return newmat;
 end function;
+    
+/* wrapping function for Greenhill's algorithm */
 
-
-/* 
-   The following function is an implementation of Greenhill's algorithm
-   to recognize if a matrix is the alternating square of another matrix.
-   
-   The algorithm is described in C Greenhill, "An algorithm for recognising 
-   the exterior square of a matrix", Linear and Multilinear Algebra, 1999.
-   
-   The function assumes that the input is a *non-singular* matrix that is a 
-   member of AltSquare( SL( d, q )) in the basis 
-   e_12, e_13,...,e_1d,...,e_{d-1}d.
- 
-   Greenhill's paper describes the algorithm for non-singular matrices, but
-   this case is not implemented and such cases may lead to error!
-*/
-
-
-__funcAltSquareToSLdq := function( Y )
+__funcAltSquareToSLdq := function( Y : type := "SL" )
     
     // find the dimensions of Y and the original matrix X
-      
+    
     dimY := Nrows( Y );
     F := CoefficientRing( Y );
-    dimX := SolveAltSquareDimEq( dimY );
+    dimX := SolveAltSquareDimEq( dimY : type := type );
+    if dimX eq 0 then
+        return false, _;
+    end if;    
+    codim := case< dimX mod Characteristic( F ) | 0: 2, default: 1 >;
+    
+    // if the type is Sp, then we recover the original Y from Y
+
+    if type ne "Sp" then
+        return __funcAltSquareToSLdq_func( Y );
+    end if; 
+      
+    if type eq "Sp" then
+       newY := Matrix( F, dimY+1, dimY+1, 
+                       [ Eltseq( Y[i] ) cat [ 0 ] : i in [1..dimY]] cat
+                       [[ 0 : i in [1..dimY]] cat [1]] );
+       dimY := dimY+1;
+       if codim eq 2 then
+           newY := Matrix( F, dimY+1, dimY+1, 
+                           [ Eltseq( newY[i] ) cat [ 0 ] : i in [1..dimY]] cat
+                           [[ 0 : i in [1..dimY]] cat [1]] );
+           dimY := dimY+1;
+       end if;
+                         
+       conj := BasisMatrixForAltSquareSp( dimX, F );
+       Y0 := conj^-1*newY*conj;
+    end if;
+
+    nrtries := 0; found := false;
+    c0 := One( SL( dimX, F )); c := __funcSLdqToAltSquare( c0 );
+    
+    repeat 
+        try 
+            X := __funcAltSquareToSLdq_func( Y0*c : chardivdim := codim eq 2 );
+            if Determinant( X ) eq 0 then error( -3 ); end if;
+            found := true;
+        catch e
+            nrtries := nrtries + 1;
+            c0 := Random( SL( dimX, #F )); c := __funcSLdqToAltSquare( c0 );
+        end try;
+    until found or nrtries ge 5;
+
+    if not found then return false, _; end if;
+
+    X0 := X*c0^-1;
+    Y1 := __funcSLdqToAltSquare( X0 : type := type );
+    if not Y*Y1^-1 in {Y^0, -Y^-0} then return false, _; end if;
+
+    return X0;
+    
+end function;
+    
+    
+__funcAltSquareToSLdq_func_old := function( Y : type := "SL" )
+    
+        // find the dimensions of Y and the original matrix X
+            
+    dimY := Nrows( Y );
+    F := CoefficientRing( Y );
+    dimX := SolveAltSquareDimEq( dimY : type := type );
+    codim := case< dimX mod Characteristic( F ) | 0: 2, default: 1 >;
+    
+    // if the type is Sp, then we recover the original Y from Y
+      
+    if type eq "Sp" then
+       newY := Matrix( F, dimY+1, dimY+1, 
+                       [ Eltseq( Y[i] ) cat [ 0 ] : i in [1..dimY]] cat
+                       [[ 0 : i in [1..dimY]] cat [1]] );
+       dimY := dimY+1;
+       if codim eq 2 then
+           newY := Matrix( F, dimY+1, dimY+1, 
+                           [ Eltseq( newY[i] ) cat [ 0 ] : i in [1..dimY]] cat
+                           [[ 0 : i in [1..dimY]] cat [1]] );
+           dimY := dimY+1;
+       end if;
+                         
+       conj := BasisMatrixForAltSquareSp( dimX, F );
+       Y := conj^-1*newY*conj;
+    end if;
+    
     if dimX eq 0 then
         return false;
     end if;
-    
-    /* a function that returns the entry of Y that corresponds to 
+        
+   /* a function that returns the entry of Y that corresponds to 
        position ({a,b},{c,d}) */
       
     Y_ := function( a, b, c, d )
@@ -344,10 +868,9 @@ __funcAltSquareToSLdq := function( Y )
                         end for;
                         
                     end for;
-                    return GL( dimX, F )!X;
+                    return MatrixAlgebra( F, dimX )!X;
                 end if;
             end if;
         end if;
     end for;
-    
 end function;

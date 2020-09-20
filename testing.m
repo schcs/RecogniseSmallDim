@@ -82,7 +82,7 @@ TestSymSquare2 := function( type, limd, limq, nr )
               "Sp": [4..limd by 2],
               "Omega+": [12..limd by 2],
               "Omega-": [12..limd by 2],
-              "Omega": [11..limd by 2],
+              "Omega": [13..limd by 2],
               default: [3..limd]  >;
 
     exc := [ <"Sp", 6, 3>, <"Sp", 9, 3 >, <"SU", 6, 7 >];
