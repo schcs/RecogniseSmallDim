@@ -1,9 +1,8 @@
 /* This file contains the functions for the recognition procedure for the symmetric
     square of Omega(d,q) (Omega+, Omega-, and Omega in odd dim) */
 
-import "smalldimreps.m":__funcSLdqToSymSquare, 
-  __funcSymSquareToSLdq, SolveSymSquareDimEq, funcpos_symsquare, funcposinv_symsquare,
-  BasisMatrixForSymSquareOmega;
+import "smalldimreps.m":__funcSLdqToSymSquare, __funcSymSquareToSLdq, 
+SolveSymSquareDimEq, funcpos_symsquare, funcposinv_symsquare, BasisMatrixForSymSquareOmega;
 
 import "auxfunctions.m": MyDerivedGroupMonteCarlo, IsSimilarToScalarMultiple, 
     SplitTensor, IsSimilarModScalar;
