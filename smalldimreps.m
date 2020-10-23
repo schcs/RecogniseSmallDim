@@ -642,6 +642,7 @@ __funcAltSquareToSLdq := function( Y : type := "SL" )
     dimY := Nrows( Y );
     F := CoefficientRing( Y );
     dimX := SolveAltSquareDimEq( dimY : type := type );
+
     if dimX eq 0 then
         return false, _;
     end if;    
@@ -652,45 +653,47 @@ __funcAltSquareToSLdq := function( Y : type := "SL" )
     if type ne "Sp" then
         return __funcAltSquareToSLdq_func( Y );
     end if; 
-      
-    if type eq "Sp" then
-       newY := Matrix( F, dimY+1, dimY+1, 
-                       [ Eltseq( Y[i] ) cat [ 0 ] : i in [1..dimY]] cat
-                       [[ 0 : i in [1..dimY]] cat [1]] );
-       dimY := dimY+1;
-       if codim eq 2 then
-           newY := Matrix( F, dimY+1, dimY+1, 
-                           [ Eltseq( newY[i] ) cat [ 0 ] : i in [1..dimY]] cat
-                           [[ 0 : i in [1..dimY]] cat [1]] );
-           dimY := dimY+1;
-       end if;
-                         
-       conj := BasisMatrixForAltSquareSp( dimX, F );
-       Y0 := conj^-1*newY*conj;
-    end if;
 
-    nrtries := 0; found := false;
-    c0 := One( SL( dimX, F )); c := __funcSLdqToAltSquare( c0 );
-    
+    // type is Sp
+
+    G0 := Sp( dimX, #F );
+    X0 := One( G0 );
+    Y0 := Y^0;
+    nrtries := 0; 
     repeat 
+        YY := Y*Y0;
+        newYY := Matrix( F, dimY+1, dimY+1, 
+                    [ Eltseq( YY[i] ) cat [ 0 ] : i in [1..dimY]] cat
+                   [[ 0 : i in [1..dimY]] cat [1]] );
+        if codim eq 2 then
+            newYY := Matrix( F, dimY+2, dimY+2, 
+                [ Eltseq( newYY[i] ) cat [ 0 ] : i in [1..dimY+1]] cat
+                [[ 0 : i in [1..dimY+1]] cat [1]] );
+        end if;
+                         
+        conj := BasisMatrixForAltSquareSp( dimX, F );
+        YY0 := conj^-1*newYY*conj;
         try 
-            X := __funcAltSquareToSLdq_func( Y0*c : chardivdim := codim eq 2 );
-            if Determinant( X ) eq 0 then error( -3 ); end if;
-            found := true;
+            X := __funcAltSquareToSLdq_func( YY0 : chardivdim := codim eq 2 );
         catch e
-            nrtries := nrtries + 1;
-            c0 := Random( SL( dimX, #F )); c := __funcSLdqToAltSquare( c0 );
+            X := false;
         end try;
-    until found or nrtries ge 5;
 
-    if not found then return false, _; end if;
+        if codim eq 2 and Category( X ) ne BoolElt then 
+            X := X*X0^-1;
+            if __funcSLdqToAltSquare( X : type := "Sp" ) ne Y then
+                X := false; 
+            end if; 
+        end if;
 
-    X0 := X*c0^-1;
-    Y1 := __funcSLdqToAltSquare( X0 : type := type );
-    if not Y*Y1^-1 in {Y^0, -Y^-0} then return false, _; end if;
-
-    return X0;
+        if codim eq 2 and Category( X ) eq BoolElt then
+            X0 := Random( G0 );
+            Y0 := __funcSLdqToAltSquare( X0 : type := "Sp" );
+        end if; 
+        nrtries := nrtries + 1; 
+    until codim eq 1 or Category( X ) ne BoolElt or nrtries ge 10; 
     
+    return X;  
 end function;
     
     

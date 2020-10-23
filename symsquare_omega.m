@@ -317,7 +317,6 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
                     "orthogonalcircle": "Omega",
                     default: false >;
 
-    print dH, typeh, dK, typek;
     // if both are Omega-, then make them Omega+
 /*    if typeh eq "Omega-" and typek eq "Omega-" then print "both Omega-";
         typeh := "Omega+"; typek := "Omega+"; print "CHANGE TYPEH!!!!!!!!!";
@@ -569,24 +568,21 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
             v^2*(x-1)^2*(((dK-1) div 2)/2+1/4);
         
         elif type eq "Omega" and typeh eq "Omega-" then
-        
-            
+                
             auxmat, vals := 
                         OmegaBasisFromComponents( G );
             aa := vals[1]; awH := vals[2]; awK := vals[3]; 
             wHwH := vals[4]; wKwK := vals[5];
             
-            print "parameters for pol", aa, awH, awK, wHwH, wKwK;
             auxmat := BasisMatrixForSymSquareOmega( "Omega", dH+dK, GF(q) )*auxmat^-1;
-            u := auxmat[dim,dimg]; v := auxmat[dim,dimg+1]; print "u and v are", u, v;
+            u := auxmat[dim,dimg]; v := auxmat[dim,dimg+1]; 
             // error(1);
             //aa := 1; awH := 6; awK := 4; wHwH := 5; wKwK := 3;
             pol := -b+aa+2*u*(x-1)*awH+2*v*(x-1)*awK+u^2*(x-1)^2*wHwH+v^2*(x-1)^2*wKwK;
-            print "pol is", pol;
         
         end if;
 
-        roots := AllRoots( pol ); print roots; 
+        roots := AllRoots( pol ); 
         basOneDim[1] := roots[1,1]^-1*basOneDim[1]; 
 
     end if;

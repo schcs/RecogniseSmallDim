@@ -136,6 +136,7 @@ RecogniseAltSquareWithTensorDecomposition := function( G :
     // the number of components in the irred decomp for the centralizer
 
     repeat   
+        repeatflag := false;
         if not assigned inv then 
             inv := InvolutionWithProperty( G, propfunc );
         end if;
@@ -152,16 +153,15 @@ RecogniseAltSquareWithTensorDecomposition := function( G :
         CD := sub< Universe( gensCD ) | gensCD >;
         M := GModule( CD );
         mins := [ x : x in MinimalSubmodules( M : Limit := 4 )]; 
-        print mins;  
-        if #mins eq 2 or 
+        if #mins eq 2 or 1 in { Dimension( x ) : x in mins } or 
            ( type in { "Omega+", "Omega-", "Omega" } and #mins  ne 3 ) or 
            ( type in { "Omega+", "Omega-", "Omega" } and 1 in { Dimension( x ) : x in mins }) then 
             delete inv; 
             gensC := [];
             gensCD := []; 
+            repeatflag := true;
         end if; 
-    until  #mins eq 3 and &+[ Dimension( x ) : x in mins ] eq dimg and 
-           not 1 in { Dimension( x ) : x in mins };
+    until  not repeatflag and #mins eq 3 and &+[ Dimension( x ) : x in mins ] eq dimg;
       
     vprint SymSquareVerbose: "#   Cent comput dim", dim, "took ", 
       Cputime()-cputm, #gensC, "gens used.";
@@ -257,12 +257,12 @@ RecogniseAltSquareWithTensorDecomposition := function( G :
     tbas := TensorBasis( aT )^-1;
     
     // set of the maps from aT into the tensor components
-    
+
     ch := pmap< GL( dimg, q ) -> GL( dH, q ) | x :-> SplitTensor( 
-                  tbas*x@at*tbas^-1, dK, dH )[2] >;
+                  tbas*x@at*tbas^-1, dH, dK )[1] >;
     
     ck := pmap< GL( dimg, q ) -> GL( dK, q ) | x :-> SplitTensor( 
-                  tbas*x@at*tbas^-1, dK, dH )[1] >;
+                  tbas*x@at*tbas^-1, dH, dK )[2] >;
     
     gens1h := [ GL(dimH,q)!__funcSLdqToAltSquare( x@ch ) : x in gensCD ];
     gens2h := [ x@ah : x in gensCD ]; 
@@ -797,9 +797,12 @@ intrinsic RecogniseAltSquare( G::GrpMat :
   p := Characteristic( CoefficientRing( G ));
   
   error if p eq 2, "the field cannot have characteristic 2";
-  error if type eq "Omega+" and dim lt 45, "Omega+ needs to have dimension at least 10"; 
-  error if type eq "Omega" and dim lt 45, "Omega needs to have dimension at least 9";
-  
+  error if type eq "SL" and dim lt 3, "SL needs to have dimension at least 3";
+  error if type eq "Sp" and dim lt 27, "Sp needs to have dimension at least 8";
+  error if type eq "SU" and dim lt 21, "SU needs to have dimension at least 7"; 
+  error if type eq "Omega+" and dim lt 66, "Omega+ needs to have dimension at least 12"; 
+  error if type eq "Omega-" and dim lt 45, "Omega+ needs to have dimension at least 10"; 
+  error if type eq "Omega" and dim lt 36, "Omega needs to have dimension at least 9";
       
   if type eq "Sp" then
       return RecogniseAltSquareWithTensorDecompositionSp( G : 

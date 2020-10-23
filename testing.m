@@ -82,10 +82,10 @@ TestSymSquare2 := function( type, limd, limq, nr )
               "Sp": [4..limd by 2],
               "Omega+": [12..limd by 2],
               "Omega-": [12..limd by 2],
-              "Omega": [13..limd by 2],
+              "Omega": [11..limd by 2],
               default: [3..limd]  >;
 
-    exc := [ <"Sp", 6, 3>, <"Sp", 9, 3 >, <"SU", 6, 7 >];
+    exc := [ <"Sp", 6, 3>, <"Sp", 9, 3 >, <"SU", 6, 7 >, <"Sp", 10, 3 >];
     qs := [ x : x in [3..limq] | IsPrimePower( x ) and IsOdd( x )];
     for d in ranged do
         for q in qs do
@@ -126,16 +126,22 @@ TestAltSquare2 := function( type, limd, limq, nr :
     vb := GetVerbose( "SymSquareVerbose" );
     SetVerbose( "SymSquareVerbose", 0 );
     
-    ranged := case< type | "SL": [3..limd], 
-              "SU": [3..limd], 
+    ranged := case< type | "SL": [8..limd], 
+              "Sp": [10..limd by 2],
+              "SU": [7..limd], 
               "Omega+": [12..limd by 2],
+              "Omega-": [14..limd by 2],
               "Omega": [11..limd by 2],
               default: [3..limd]  >;
     
     qs := [ x : x in [3..limq] | IsPrimePower( x ) and IsOdd( x )];
+    exc := [ <"Sp", 10, 3>, <"Sp", 10, 9 >, <"Sp",10,27> ];
     for d in ranged do
         for q in qs do
-	    print d, q, ":", TestAltSquare( type, d, q : NrTries := nr,
+            if <type,d,q> in exc then print "skipping", <type,d,q>;
+                continue;
+            end if;
+	        print d, q, ":", TestAltSquare( type, d, q : NrTries := nr,
 			 UseTensorDecomposition := UseTensorDecomposition );
         end for;
     end for;
