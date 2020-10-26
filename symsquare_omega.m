@@ -254,14 +254,6 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
         Flat( [[z+k*dK : k in [0..dH-1]] : z in [1..dK]] ));
     end if; 
     
-    if ft1 eq "symplectic" then 
-        print "SYMPLECTIC!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; 
-        return aT;
-        symp := true;
-    else 
-        symp := false;
-    end if;
-
     dt1 := Dimension( tf[t1] ); 
     dt2 := Dimension( tf[t2] );
 
@@ -392,7 +384,6 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
                                                           typeh := typeh, 
                                                           typek := typek,
                                                           ww := ww );
-
     //return sub< Universe( gens1k ) | gens1k >, Tk;
     
     tbas := TensorProduct( Th^-1, Tk^-1 )*tbas;
@@ -602,13 +593,12 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
             u := auxmat[dim,dimg]; v := auxmat[dim,dimg+1]; 
             // error(1);
             //aa := 1; awH := 6; awK := 4; wHwH := 5; wKwK := 3;
-            pol := -b+aa+2*u*(x-1)*awH+2*v*(x-1)*awK+u^2*(x-1)^2*wHwH+v^2*(x-1)^2*wKwK;
-        
+            pol := -b+aa+2*u*(x-1)*awH+2*v*(x-1)*awK+u^2*(x-1)^2*wHwH+v^2*(x-1)^2*wKwK; 
         end if;
 
-        roots := AllRoots( pol ); 
+        roots := AllRoots( pol );
         basOneDim[1] := roots[1,1]^-1*basOneDim[1]; 
-
+        
     end if;
 
    v, coeffs := TestBasisOmega( G, basH, basK, basT, basOneDim[1], basOneDim[1], G0 :
@@ -617,7 +607,7 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
                                 typek := typek, 
                                 ww := ww );  
    assert v;     
-
+   
    bas := BuildBasisOmega( G, basH, basK, basT : type := type, 
                                               typeh := typeh,
                                               typek := typek,

@@ -8,7 +8,7 @@ basisfromcomprecf := recformat< bas : AlgMatElt, vals : SeqEnum >;
 SymProd := function( vec1, vec2 )
 
     d := Dimension( Parent( vec1 ));
-    vec := [ 0 : x in [1..d*(d+1)/2]];
+    vec := [ 0*vec1[1] : x in [1..d*(d+1)/2]];
     for i in [1..d] do
         for j in [1..d] do
             a := vec1[i]*vec2[j];
@@ -75,11 +75,23 @@ AssignOmegaBasisFromComponents := procedure( ~G, d1, d2, F :
         f3[3,3] := w2w2;
         f3[2,2] := ww;
 
-        if q eq 7 then
+        _formf3 := function( u, v )
+            return u[1]*v[3]+1/2*u[2]*v[2]+u[3]*v[1];
+        end function;
+
+    /* if false and q eq 7 then
             tr := Matrix( F, 3, 3, [3,2,1,5,1,5,0,4,1]); 
         else 
             tr := TransformForm( f3, "orthogonalcircle" );
-        end if;
+        end if; */
+        
+        tr := TransformForm( f3, "orthogonalcircle" );
+
+        while (tr[3,1] eq 0 and tr[3,3] eq 0) or tr[2,2] eq 0 do
+            tr := tr*Random( GO( 3, q ));
+        end while;
+
+        print tr;
 
         w1 := tr[1,1]*V.i1+tr[1,2]*V.i2+tr[1,3]*V.i3; 
         w2 := tr[2,1]*V.i1+tr[2,2]*V.i2+tr[2,3]*V.i3; 
@@ -109,11 +121,10 @@ AssignOmegaBasisFromComponents := procedure( ~G, d1, d2, F :
     dK := NumberOfRows( basK );
     dT := NumberOfRows( basT );
 
-    bom := BasisMatrixForSymSquareOmega( typeh, #bas1, F );
+    bom := BasisMatrixForSymSquareOmega( typeh, #bas1, F ); 
     boc := BasisMatrixForSymSquareOmega( typek, #bas2, F : ww := ww );
     basH := [&+[ bom[i,j]*basH[j] : j in [1..dH]] : i in [1..dH]];
     basK := [&+[ boc[i,j]*basK[j] : j in [1..dK]] : i in [1..dK]];
-
 
     bas := basH[1..dH-1] cat basK[1..dK-1] cat basT[1..dT] cat [basH[dH]] cat 
             [basK[dK]];
@@ -129,6 +140,17 @@ AssignOmegaBasisFromComponents := procedure( ~G, d1, d2, F :
             else 
                 return 0;
             end if;
+        end function;
+
+        _form1 := function( u, v )
+
+            s := 0;
+            for i in [1..11] do
+                for j in [1..11] do
+                    s := s+u[i]*v[j]*_form( i, j );
+                end for;
+            end for;
+            return s;
         end function;
 
         _formsymsquare := function( u, v )
@@ -295,7 +317,7 @@ TestBasisOmega := function( G, basH, basK, basT, wH, wK, g : type := "Omega+",
 
     F := CoefficientRing( g );    
     scalars := [ <a,b,c,d > : a in [1,-1], b in [1,-1], c in [1,-1], 
-                 d in [ x : x in F | x in [1,-1] ]]; 
+                 d in [ 1, -1 ]]; 
     results := [];
     maxzero := 0;
     for s in scalars do 

@@ -798,11 +798,11 @@ intrinsic RecogniseAltSquare( G::GrpMat :
   
   error if p eq 2, "the field cannot have characteristic 2";
   error if type eq "SL" and dim lt 3, "SL needs to have dimension at least 3";
-  error if type eq "Sp" and dim lt 27, "Sp needs to have dimension at least 8";
+  //error if type eq "Sp" and dim lt 27, "Sp needs to have dimension at least 8";
   error if type eq "SU" and dim lt 21, "SU needs to have dimension at least 7"; 
   error if type eq "Omega+" and dim lt 66, "Omega+ needs to have dimension at least 12"; 
-  error if type eq "Omega-" and dim lt 45, "Omega- needs to have dimension at least 10"; 
-  error if type eq "Omega" and dim lt 36, "Omega needs to have dimension at least 9";
+  error if type eq "Omega-" and dim lt 66, "Omega- needs to have dimension at least 12"; 
+  error if type eq "Omega" and dim lt 55, "Omega needs to have dimension at least 11";
       
   if type eq "Sp" then
       return RecogniseAltSquareWithTensorDecompositionSp( G : 

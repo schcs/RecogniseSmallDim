@@ -130,10 +130,10 @@ TestAltSquare2 := function( type, limd, limq, nr :
     SetVerbose( "SymSquareVerbose", 0 );
     
     ranged := case< type | "SL": [8..limd], 
-              "Sp": [10..limd by 2],
+              "Sp": [8..limd by 2],
               "SU": [7..limd], 
               "Omega+": [12..limd by 2],
-              "Omega-": [14..limd by 2],
+              "Omega-": [12..limd by 2],
               "Omega": [11..limd by 2],
               default: [3..limd]  >;
     
