@@ -467,10 +467,13 @@ __funcSymSquareToSLdq := function( g : type := "SL", ww := 1/2 )
     end for;
 
     if omegaflag then 
-        v := exists(x){ x : x in [1..dim-1] | x ne i0 and A[1,x] ne 0 }; 
-        assert v;
-        A[1,dim-i0+1] := 1/2*g[1,funcpos_symsquare( dim, x, dim-i0+1 )]/A[1,x];
-    end if;
+        v := exists(x){ x : x in [1..dim] | x ne i0 and A[1,x] ne 0 }; 
+        if v then 
+            A[1,dim-i0+1] := 1/2*g[1,funcpos_symsquare( dim, x, dim-i0+1 )]/A[1,x];
+        else 
+            A[1,dim-i0+1] := 0;
+        end if;
+    end if; 
 
     // get the other rows
     // solve a system of linear equations

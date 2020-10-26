@@ -801,7 +801,7 @@ intrinsic RecogniseAltSquare( G::GrpMat :
   error if type eq "Sp" and dim lt 27, "Sp needs to have dimension at least 8";
   error if type eq "SU" and dim lt 21, "SU needs to have dimension at least 7"; 
   error if type eq "Omega+" and dim lt 66, "Omega+ needs to have dimension at least 12"; 
-  error if type eq "Omega-" and dim lt 45, "Omega+ needs to have dimension at least 10"; 
+  error if type eq "Omega-" and dim lt 45, "Omega- needs to have dimension at least 10"; 
   error if type eq "Omega" and dim lt 36, "Omega needs to have dimension at least 9";
       
   if type eq "Sp" then

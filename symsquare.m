@@ -502,15 +502,16 @@ intrinsic RecogniseSymSquare( G::GrpMat : type := "SL", CheckResult := true )
 
   dim := Dimension( G );                         
   p := Characteristic( CoefficientRing( G ));
-  
   error if p eq 2, "the field cannot have characteristic 2";
   //error if type eq "SL" and dim lt 3, "SL needs to have dimension at least 3";
   //error if type eq "Sp" and dim lt 27, "Sp needs to have dimension at least 8";
   //error if type eq "SU" and dim lt 27, "SU needs to have dimension at least 8"; 
+  error if <type,dim,p> eq <"Omega+",54,3>, "Omega+(10,q) is not implemented for char 3"; 
+  error if <type,dim,p> eq <"Omega-",54,3>, "Omega-(10,q) is not implemented for char 3"; 
+  error if <type,dim,p> eq <"Omega",44,5>, "Omega(9,q) is not implemented for char 5"; 
   error if type eq "Omega+" and dim lt 53, "Omega+ needs to have dimension at least 10"; 
-  error if type eq "Omega-" and dim lt 35, "Omega+ needs to have dimension at least 8"; 
-  error if type eq "Omega" and dim lt 64, "Omega needs to have dimension at least 11";
- 
+  error if type eq "Omega-" and dim lt 35, "Omega- needs to have dimension at least 8"; 
+  error if type eq "Omega" and dim lt 43, "Omega needs to have dimension at least 9";
 
   return RecogniseSymSquareFunc( G : type := type, CheckResult := CheckResult );
 end intrinsic;

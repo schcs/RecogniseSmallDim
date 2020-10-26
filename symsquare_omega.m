@@ -38,9 +38,12 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
     /* find an involution with sufficiently large minus one eigenspace and 
        its centraliser. */
       
-    eiglim1 := Ceiling((2/9)*dim^2); // lower limit for eigenspace dim
-    eiglim2 := Floor((1/4)*dim^2); // upper limit for eigenspace dim
+    eiglim1 := case< <type,dim> | <"Omega",9>: 20,
+                                  <"Omega-",14>: 40,
+                                  <"Omega+",14>: 40,
+                    default: Ceiling((2/9)*dim^2)>; // lower limit for eigenspace dim
 
+    eiglim2 := Floor((1/4)*dim^2); // upper limit for eigenspace dim
     // normally use 10 generators for 
     NrGensCentInv := 10; 
     
@@ -120,8 +123,7 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
      
     count := 0;
     repeat  
-    count := count+1;
-    if count mod 10 eq 0 then print count, "tries!!!!!!!!!!!!!!"; end if;
+    count := count+1;;
 
         tryagain := false;
         if not assigned inv then 
@@ -134,7 +136,8 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
                 tryagain := true;
                 continue;
             end if;
-        end if;         
+        end if;      
+
         assert assigned inv;
         C := CentraliserOfInvolution( G, inv : 
                      CompletionCheck := __compcheck );  
@@ -237,7 +240,7 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
       
     genst := [ x@at : x in gensCD ];
     aT := sub< Universe( genst ) | genst >;
-    v := IsTensor( aT ); assert v; 
+    v := IsTensor( aT : Factors := [[dH, dK]]); assert v; 
     tf := TensorFactors( aT );
     ft1 := ClassicalForms( tf[1] : Scalars := true )`formType;
     ft2 := ClassicalForms( tf[2] : Scalars := true )`formType;
@@ -253,6 +256,7 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
     
     if ft1 eq "symplectic" then 
         print "SYMPLECTIC!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; 
+        return aT;
         symp := true;
     else 
         symp := false;
@@ -306,6 +310,24 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
 
     sch := formh`scalars;
     sck := formk`scalars;
+
+    /* it might happen that an elment of gens1k or gens1h is the identity. 
+       in this case, the corresponding scalar 1 will be mssing from sck and/or sch */
+
+    if #sch lt #gens1h then
+        posid := [ i : i in [1..#gens1h] | gens1h[i] eq gens1h[1]^0 ];
+        for pos in posid do
+           sch := Insert( sch, pos, 1 );
+        end for;
+    end if;
+
+    if #sck lt #gens1k then  
+        posid := [ i : i in [1..#gens1k] | gens1k[i] eq gens1k[1]^0 ];
+        for pos in posid do
+           sck := Insert( sck, pos, 1 );
+        end for;
+    end if;
+
     typeh := case< formh`formType | "orthogonalplus": "Omega+", 
                     "orthogonalminus": "Omega-", 
                     "orthogonalcircle": "Omega",  
@@ -537,6 +559,8 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
                                               ww := ww ); 
    g := sub< SL( dimg, q ) | { bas*x*bas^-1 : x in Generators( G0 )}>;
    //return CD, bas;
+
+    print typeh, typek;
 
    if not pdivdim then 
 
