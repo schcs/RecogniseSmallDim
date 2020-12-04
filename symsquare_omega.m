@@ -39,6 +39,7 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
        its centraliser. */
       
     eiglim1 := case< <type,dim> | <"Omega",9>: 20,
+                                  //<"Omega",11>: 30,
                                   <"Omega-",14>: 40,
                                   <"Omega+",14>: 40,
                     default: Ceiling((2/9)*dim^2)>; // lower limit for eigenspace dim
@@ -107,7 +108,6 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
                                 TypeOfSymSquareOmega( "Omega", dims0[inds[2]],q)>,
                                 <TypeOfSymSquareOmega( "Omega", dims0[inds[1]],q),
                                 TypeOfSymSquareOmega( "Omega-", dims0[inds[2]],q)>
-                                
                                 },
                     default: false >;
 
@@ -460,11 +460,12 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
                                                wH := basOneDim[1], 
                                                ww := ww );
     tr := GL( dimg, q )!bas;
-    g := sub< SL( dimg, q ) | { bas*x*bas^-1 : x in Generators( G0 )}>;
+    g := sub< GL( dimg, q ) | { bas*x*bas^-1 : x in Generators( G0 )}>;
     form := ClassicalForms( g )`bilinearForm;
     
     posT := funcpos_symsquare( dim, dim-dH div 2, dim : type := type );
     if pdivdim then posT := posT-1; end if;
+    
     if not IsSquare( 2*form[dH div 2+1,posT] ) then
         if typeh eq "Omega+" then 
             for i in [1..#basH] do 
@@ -484,10 +485,16 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
         if typeh eq "Omega-" then  
             trh := IdentityMatrix( GF( q ), dH );
             for i in [1..dH div 2 -1 ] do 
-                trh[i,i] := -1;
+                trh[i,i] := z;
             end for;
 
-            m2 := Matrix( GF( q ), 2, 2, [-1,0,0,-1]);
+            if q mod 4 eq 3 then 
+                m2 := Matrix( GF( q ), 2, 2, [z,0,0,z]);
+            else 
+                m0 := ClassicalForms( OmegaMinus( 2, q ))`bilinearForm;
+                m2 := Matrix( GF( q ), 2, 2, [z*m0[1,1],0,0,z*m0[2,2]]);
+            end if;
+
             t2 := TransformForm( m2, "orthogonalminus" );
             
             trh[dH div 2,dH div 2] := t2[1,1]; trh[dH div 2,dH div 2+1] := t2[1,2];
@@ -512,7 +519,7 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
                                               ww := ww );
    tr := GL( dimg, q )!bas;
    //return CD, tr;
-   g := sub< SL( dimg, q ) | { bas*x*bas^-1 : x in Generators( G0 )}>;
+   g := sub< GL( dimg, q ) | { bas*x*bas^-1 : x in Generators( G0 )}>;
    form := ClassicalForms( g )`bilinearForm; 
    vH := Sqrt( form[1,dimg] )^-1; 
     
@@ -548,10 +555,10 @@ RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Ome
                                               typek := typek,
                                               wH := basOneDim[1], 
                                               ww := ww ); 
-   g := sub< SL( dimg, q ) | { bas*x*bas^-1 : x in Generators( G0 )}>;
+   g := sub< GL( dimg, q ) | { bas*x*bas^-1 : x in Generators( G0 )}>;
    //return CD, bas;
 
-    print typeh, typek;
+   // print typeh, typek;
 
    if not pdivdim then 
 

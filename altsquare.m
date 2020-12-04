@@ -110,11 +110,11 @@ RecogniseAltSquareWithTensorDecomposition := function( G :
     /* find an involution with sufficiently large minus one eigenspace and 
        its centraliser. */
       
-    eiglim1 := case< dim | 6: 8, default: (2/9)*dim^2 >; 
+    eiglim1 := case< dim | 6: 8, 11: 29, 12: 35, default: (2/9)*dim^2 >; 
     // lower limit for eigenspace dim
     eiglim2 := case< dim | 6: 8, default: (1/4)*dim^2 >; 
     // upper limit for eigenspace dim
-      
+    
     if type eq "Omega-" and dim eq 12 then 
         eiglim1 := 36;
         eiglim2 := 36;
@@ -161,6 +161,7 @@ RecogniseAltSquareWithTensorDecomposition := function( G :
             gensCD := []; 
             repeatflag := true;
         end if; 
+        print [ Dimension( x ) : x in mins ];
     until  not repeatflag and #mins eq 3 and &+[ Dimension( x ) : x in mins ] eq dimg;
       
     vprint SymSquareVerbose: "#   Cent comput dim", dim, "took ", 
@@ -236,6 +237,8 @@ RecogniseAltSquareWithTensorDecomposition := function( G :
     genst := [ x@at : x in gensCD ];
     aT := sub< Universe( genst ) | genst >;
     
+    return aT;
+
     v := IsTensor( aT ); assert v; 
     
     // get the dimensions of the tensor factors
@@ -797,8 +800,8 @@ intrinsic RecogniseAltSquare( G::GrpMat :
   p := Characteristic( CoefficientRing( G ));
   
   error if p eq 2, "the field cannot have characteristic 2";
-  error if type eq "SL" and dim lt 3, "SL needs to have dimension at least 3";
-  //error if type eq "Sp" and dim lt 27, "Sp needs to have dimension at least 8";
+  error if type eq "SL" and dim lt 21, "SL needs to have dimension at least 7";
+  error if type eq "Sp" and dim lt 27, "Sp needs to have dimension at least 8";
   error if type eq "SU" and dim lt 21, "SU needs to have dimension at least 7"; 
   error if type eq "Omega+" and dim lt 66, "Omega+ needs to have dimension at least 12"; 
   error if type eq "Omega-" and dim lt 66, "Omega- needs to have dimension at least 12"; 

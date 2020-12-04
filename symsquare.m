@@ -29,14 +29,14 @@ RecogniseSymSquareDim2 := function( G )
        transforms G to canonical form with respect to this form. */
       
     q := #CoefficientRing( G );
-    mat := TransformForm( G )*GL(3,q)![-1, 0, 0,
+    mat := TransformForm( G : Scalars := true )*GL(3,q)![-1, 0, 0,
                                         0, 1, 0,
                                         0, 0, 1];
       
     // construct the function SL(2,q) -> G 
       
     a := map< GL( 2, q ) -> GL( 3, q ) | 
-         x :-> (SL(3,q)!__funcSLdqToSymSquare( x ))^(mat^-1) >;
+         x :-> (GL(3,q)!__funcSLdqToSymSquare( x ))^(mat^-1) >;
     
     // construct the function G -> SL( 2, q )
     
@@ -328,14 +328,16 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
     aH := sub< GL( dimH, q ) | [ x@ah : x in gensCD ]>;
     aK := sub< GL( dimK, q ) | [ x@ak : x in gensCD ]>;
 
-    if < dH, q > ne < 2, 3 > and < type, dH, q > ne < "SU", 2, 9 > then 
+    assert IsIrreducible( aH ) and IsIrreducible( aK );
+
+   /* if < dH, q > ne < 2, 3 > and < type, dH, q > ne < "SU", 2, 9 > then 
         aH := MyDerivedGroupMonteCarlo( aH );
-    end if;
+    end if; */
     
-    if < dK, q > ne < 2, 3 > and < type, dH, q > ne < "SU", 2, 9 > then
+   /* if < dK, q > ne < 2, 3 > and < type, dH, q > ne < "SU", 2, 9 > then
         aK := MyDerivedGroupMonteCarlo( aK );
-    end if;
-    
+    end if; */
+     
     _, b1, c1, bas1 := RecogniseSymSquareFunc( aH : type := type );
     _, b2, c2, bas2 := RecogniseSymSquareFunc( aK : type := type );
     

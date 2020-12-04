@@ -13,6 +13,23 @@ SymSquare := function( type, n, q : twist := false )
       g := OmegaPlus( n, q );
   elif type eq "Omega-" then
       g := OmegaMinus( n, q );
+  elif type eq "GL" then
+      g := GL( n, q );
+  elif type eq "GU" then
+      g := GU( n, q );
+      q := q^2;
+  elif type eq "GO" then
+      g := GO( n, q );
+  elif type eq "GO+" then
+      g := GOPlus( n, q );
+  elif type eq "GO-" then
+      g := GOMinus( n, q );
+  elif type eq "SO" then
+      g := SO( n, q );
+  elif type eq "SO+" then
+      g := SOPlus( n, q );
+  elif type eq "SO-" then
+      g := SOMinus( n, q );
   end if;
 
   comps := [ x : x in CompositionFactors( SymmetricSquare( GModule( g ))) |
@@ -43,6 +60,24 @@ AltSquare := function( type, n, q : twist := false )
       g := OmegaMinus(n,q);
   elif type eq "Omega" then
       g := Omega(n,q);
+  elif type eq "GL" then
+      g := GL(n,q);
+  elif type eq "GU" then
+      g := GU(n,q);
+      q := q^2;
+  elif type eq "GO+" then
+      g := GOPlus(n,q);
+  elif type eq "GO-" then
+      g := GOMinus(n,q);
+  elif type eq "GO" then
+      g := GO(n,q);
+  elif type eq "SO+" then
+      g := SOPlus(n,q);
+  elif type eq "SO-" then
+      g := SOMinus(n,q);
+  elif type eq "SO" then
+      g := SO(n,q);
+
   end if;
     
   comps := [ x : x in CompositionFactors( ExteriorSquare( GModule( g ))) |
@@ -63,9 +98,13 @@ TestSymSquare := function(type, d, q : NrTries := 100 )
     
     if d ge 20 then NrTries := 20; end if;
     
+    type0 := case< type | "GL": "SL", "GU": "SU", "SO+": "Omega+", 
+                         "GO+": "Omega+", "SO-": "Omega-", "GO-": "Omega-", 
+                         "SO": "Omega", "GO": "Omega", default: type >;
+
     for i in [1..NrTries] do
         G := SymSquare( type, d, q : twist := true );
-        v, a, b, bas := RecogniseSymSquare( G : type := type, CheckResult := true );
+        v, a, b, bas := RecogniseSymSquare( G : type := type0, CheckResult := true );
         assert v and { x@b@a*x^-1 eq x^0 : x in { Random( G ) : z in [1..100] }}           eq { true };
     end for;
     
@@ -77,18 +116,23 @@ TestSymSquare2 := function( type, limd, limq, nr )
     vb := GetVerbose( "SymSquareVerbose" );
     SetVerbose( "SymSquareVerbose", 0 );
     
-    ranged := case< type | "SL": [2..limd], 
-              "SU": [3..limd], 
-              "Sp": [4..limd by 2],
-              "Omega+": [10..limd by 2],
-              "Omega-": [10..limd by 2],
-              "Omega": [9..limd by 2],
+    ranged := case< type | "SL": [2..limd], "GL": [3..limd], 
+              "SU": [3..limd], "GU": [3..limd],
+              "Sp": [4..limd by 2], 
+              "Omega+": [10..limd by 2], "GO+": [10..limd by 2], "SO+": [10..limd by 2],
+              "Omega-": [10..limd by 2], "GO-": [10..limd by 2], "SO-": [10..limd by 2],
+              "Omega": [9..limd by 2],   "GO": [9..limd by 2], "SO": [9..limd by 2],
               default: [3..limd]  >;
 
     exc := [ <"Sp", 6, 3>, <"Sp", 9, 3 >, <"SU", 6, 7 >, <"Sp", 10, 3 >,
-            <"Omega+",10,3>,<"Omega+",10,9>,<"Omega+",10,27>,
+            <"GO+",10,3>,<"SO+",10,3>,<"Omega+",10,3>,<"Omega+",10,9>,<"GO+",10,9>,
+            <"SO+",10,9>,<"Omega+",10,27>,<"GO+",10,27>,<"SO+",10,27>,
             <"Omega-",10,3>,<"Omega-",10,9>,<"Omega-",10,27>,
-            <"Omega",9,5>,<"Omega",9,25>];
+            <"GO-",10,3>,<"GO-",10,9>,<"GO-",10,27>,
+            <"SO-",10,3>,<"SO-",10,9>,<"SO-",10,27>,
+            <"Omega",9,5>,<"Omega",9,25>,
+            <"GO",9,5>,<"GO",9,25>,
+            <"SO",9,5>,<"SO",9,25>];
     qs := [ x : x in [3..limq] | IsPrimePower( x ) and IsOdd( x )];
     for d in ranged do
         for q in qs do
@@ -111,10 +155,15 @@ TestAltSquare := function( type, d, q : NrTries := 100,
 			   UseTensorDecomposition := true )
     
     if d ge 20 then NrTries := 20; end if;
+
+    type0 := case< type | "GL": "SL", "GU": "SU", "SO+": "Omega+", 
+                         "GO+": "Omega+", "SO-": "Omega-", "GO-": "Omega-", 
+                         "SO": "Omega", "GO": "Omega", default: type >;
+
     
     for i in [1..NrTries] do
         G := AltSquare( type, d, q : twist := true );
-        v, a, b, bas := RecogniseAltSquare( G : type := type, 
+        v, a, b, bas := RecogniseAltSquare( G : type := type0, 
                                                 CheckResult := true,
                         UseTensorDecomposition := UseTensorDecomposition );
         assert v and { x@b@a*x^-1 eq x^0 : x in { Random( G ) : z in [1..100] }}           eq { true };
@@ -129,12 +178,12 @@ TestAltSquare2 := function( type, limd, limq, nr :
     vb := GetVerbose( "SymSquareVerbose" );
     SetVerbose( "SymSquareVerbose", 0 );
     
-    ranged := case< type | "SL": [8..limd], 
+    ranged := case< type | "SL": [7..limd], "GL": [7..limd], 
               "Sp": [8..limd by 2],
-              "SU": [7..limd], 
-              "Omega+": [12..limd by 2],
-              "Omega-": [12..limd by 2],
-              "Omega": [11..limd by 2],
+              "SU": [7..limd], "GU": [7..limd],
+              "Omega+": [12..limd by 2], "GO+": [12..limd by 2], "SO+": [12..limd by 2], 
+              "Omega-": [12..limd by 2], "GO-": [12..limd by 2], "SO-": [12..limd by 2],
+              "Omega": [11..limd by 2], "GO": [11..limd by 2], "SO": [11..limd by 2],
               default: [3..limd]  >;
     
     qs := [ x : x in [3..limq] | IsPrimePower( x ) and IsOdd( x )];

@@ -91,8 +91,6 @@ AssignOmegaBasisFromComponents := procedure( ~G, d1, d2, F :
             tr := tr*Random( GO( 3, q ));
         end while;
 
-        print tr;
-
         w1 := tr[1,1]*V.i1+tr[1,2]*V.i2+tr[1,3]*V.i3; 
         w2 := tr[2,1]*V.i1+tr[2,2]*V.i2+tr[2,3]*V.i3; 
         w3 := tr[3,1]*V.i1+tr[3,2]*V.i2+tr[3,3]*V.i3;
