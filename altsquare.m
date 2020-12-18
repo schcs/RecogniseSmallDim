@@ -236,8 +236,7 @@ RecogniseAltSquareWithTensorDecomposition := function( G :
       
     genst := [ x@at : x in gensCD ];
     aT := sub< Universe( genst ) | genst >;
-    
-    return aT;
+    //if dH eq 10 then return aT; end if; 
 
     v := IsTensor( aT ); assert v; 
     
