@@ -3,26 +3,22 @@
    to solve the recognition problem in symmetric square representations of 
    classical groups.
   
-   This file contains the implementation for SL, Sp, SU. These groups will 
-   be referred to as SX(n,q). The implementations 
-   for the Omega groups are contained in a separate file. 
+   This file contains the implementation for SL.
   
    The basis for the underlying vector space in the symmetric square action
-   is always assumes to be in the order e11, e12, ..., e1d, e22,..., edd 
-   where eij = ei wedge ej.
+   is always assumes to be in the order e11, e12, ..., e1d, e22,..., edd.
   
 */
   
 import "smalldimreps.m":__funcSLdqToSymSquare, 
   __funcSymSquareToSLdq, SolveSymSquareDimEq, funcpos_symsquare;
-import "auxfunctions.m": MyDerivedGroupMonteCarlo;
-import "symsquare_omega.m":RecogniseSymSquareOmegaFunc;
-import "symsquare_omega_aux.m":AssignBasisFromComponents, BuildBasisOmega;
 
-AddAttribute( GrpMat, "BasisMatrixFromComponents" );
+import "auxfunctions.m": MyDerivedGroupMonteCarlo, IsSimilarToScalarMultiple, 
+    SplitTensor, IsSimilarModScalar;
 
-/* The recognition procedure for SX( 2, q ). It is based on the fact that 
-   SymSquare( SL( 2, q )) is 3-dimensional and preserves a quadratic form. */
+import "symsquare_omega.m":RecogniseSymSquareWithTensorDecompositionOmegaFunc;
+
+// The recognition procedure for SL( 2, q )
     
 RecogniseSymSquareDim2 := function( G )
     
@@ -52,7 +48,7 @@ RecogniseSymSquareDim2 := function( G )
     return true, a, b, mat^-1;
 end function;    
     
-// The recognition procedure for SX(3,q)    
+// The recognition procedure for SL(3,q)    
     
 RecogniseSymSquareDim3 := function( G : type := "SL" )
     
@@ -74,15 +70,15 @@ RecogniseSymSquareDim3 := function( G : type := "SL" )
     vprint SymSquareVerbose: "#   Cent comput dim 3 took ", Cputime()-cputm;
     
     /* The C-module V splits into three components of dimension 3, 1, 2
-       which are isomorphic to symmetric square of SX(2,q), trivial module, 
-       and natural module for SX(2,q) */
+       which are isomorphic to symmetric square of SL(2,q), trivial module, 
+       and natural module for SL(2,q) */
 
     M := GModule( C );
     mins := [ x : x in MinimalSubmodules( M ) ];
             
-    mH := [ x : x in mins | Dimension( x ) eq 3 ][1]; // sym square of SX(2,q)
+    mH := [ x : x in mins | Dimension( x ) eq 3 ][1]; // sym square of SL(2,q)
     mK := [ x : x in mins | Dimension( x ) eq 1 ][1]; // trivial module
-    mT := [ x : x in mins | Dimension( x ) eq 2][1];  // natural module of SX(2,q)
+    mT := [ x : x in mins | Dimension( x ) eq 2][1];  // natural mod of SL(2,q)
       
     // the first basis element e11 will be a generator of the 1-dim component
     e11 := Basis( mK )[1];
@@ -103,11 +99,12 @@ RecogniseSymSquareDim3 := function( G : type := "SL" )
     mns := GL( 2, q )!ScalarMatrix( GF( q ), 2, -1 ); // scalar matrix -I
     
     for i in [1..#gensC] do
-        gi := gensC[i]@at;
-        if MinimalPolynomial( gi ) eq MinimalPolynomial( mns*gi ) then
+        if MinimalPolynomial( gensC[i]@at ) eq 
+              MinimalPolynomial( mns*(gensC[i]@at)) then
            repeat
-               x := Random( C ); xa := x@at;
-           until MinimalPolynomial( xa ) ne MinimalPolynomial( mns*xa );
+               x := Random( C );
+           until MinimalPolynomial( x@at ) ne
+                 MinimalPolynomial( mns*(x@at));
            gensC[i] := x;
        end if;
     end for;
@@ -119,7 +116,6 @@ RecogniseSymSquareDim3 := function( G : type := "SL" )
        and recognise it as sym square */
     aH := sub< GL( 3, q ) | [ x@ah : x in gensC ]>;
     
-    // I'm not sure any more why the following line is needed.
     if q ne 3 and <type,q> ne <"SU",9> then 
         aH := MyDerivedGroupMonteCarlo( aH );
     end if;
@@ -173,7 +169,8 @@ RecogniseSymSquareDim3 := function( G : type := "SL" )
        a  random element <test> of G in the present basis. 
        Then the scalar c and the possible non-square factor z0 can be 
        picked up by considering the value of
-       test[1,2]*test[1,3]*(2*test[1,1]*test[1,5])^-1. This value should be c^2*z0. */
+       test[1,2]*test[1,3]*(2*test[1,1]*test[1,5])^-1. This value
+       of this should be c^2*z0. */
       
     bas := [e11,e12,e13,e22,e23,e33];
     tr := GL( 6, q )![ Eltseq( x ) : x in bas ];
@@ -184,7 +181,6 @@ RecogniseSymSquareDim3 := function( G : type := "SL" )
     until test[1,1] ne 0 and test[1,5] ne 0;
         
     lambdasq := test[1,2]*test[1,3]*(2*test[1,1]*test[1,5])^-1;
-
     try 
       lambda := Sqrt( lambdasq ); 
       bas[2] := lambda*bas[2];
@@ -210,73 +206,32 @@ RecogniseSymSquareDim3 := function( G : type := "SL" )
     return true, a, b, tr;
 end function;
     
-/* The following function performs the recognition procedure by calling 
-   the function RecogniseSmallDegree */
-
-RecogniseSymSquareLowDim := function( G : type  )
-
-    q := #CoefficientRing( G ); 
-    dimg := Dimension( G );
     
-    // the natural dimension of G
-    dim := SolveSymSquareDimEq( dimg : type := type ); 
-
-    v, g := RecogniseSmallDegree( G, type, dim, q );
-    error(1);
-    gensG := GeneratorsSequence( G ); 
-    gensg := [ __funcSLdqToSymSquare( x : type := type ) : x in GeneratorsSequence( g )];
-    v, tr := IsIsomorphic( GModule( sub< Universe( gensG ) | gensG > ),
-            GModule( sub< Universe( gensg ) | gensg > ));
-    assert v;
-    tr := GL( dimg, q )!tr;
-    error(111);
-
-    // create maps between G and SL( 6, q )
-    a := map< GL( dim, q ) -> GL( dimg, q ) | 
-         x :-> GL( dimg, q )!__funcSLdqToSymSquare( x )^tr >;
-    
-    b := pmap< GL( dimg, q ) -> GL( dim, q ) |
-         x :-> GL( dim, q )!__funcSymSquareToSLdq( x^(tr^-1)) >;
-    
-    return true, a, b, tr;
-end function;
-    
-// The general recursive function. 
+// The general function
 forward RecogniseSymSquareFunc;
+    
 RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
     
     cputm := Cputime();
+    
+    // in small dimension, call other functions
+    case Dimension( G ): 
+      when 3: return RecogniseSymSquareDim2( G );
+      when 6: return RecogniseSymSquareDim3( G : type := type );
+    end case;
+
+    if type in { "Omega+", "Omega-", "Omega" } then 
+      return RecogniseSymSquareWithTensorDecompositionOmegaFunc( G : type := type, 
+                                            CheckResult := CheckResult );
+    end if;
 
     q := #CoefficientRing( G ); 
-    _, p := IsPrimePower( q );
     dimg := Dimension( G );
+    
     // the natural dimension of G
     dim := SolveSymSquareDimEq( dimg : type := type ); 
     vprint SymSquareVerbose: "# Recog SymSquare dim", dim;
     
-    // in small dimension, call other functions
-    case dim: 
-      when 2: return RecogniseSymSquareDim2( G );
-      when 3: return RecogniseSymSquareDim3( G : type := type );
-    end case;
-
-    if 
-        <type,dim,p> eq <"Omega+",10,3> or 
-        <type,dim,p> eq <"Omega-",10,3> or  
-        <type,dim,p> eq <"Omega",9,5> or 
-        type eq "Omega+" and dim lt 10 or  
-        type eq "Omega-" and dim lt 8 or  
-        type eq "Omega" and dim lt 9 then
-        
-        return RecogniseSymSquareLowDim( G : type := type );
-    end if;
-
-    // Recursion does not (yet) work for Omega groups, so we call other function 
-
-    if type in { "Omega+", "Omega-", "Omega" } then 
-      return RecogniseSymSquareOmegaFunc( G : type := type, CheckResult := CheckResult );
-    end if;
-        
     /* find an involution with sufficiently large minus one eigenspace and 
        its centraliser. */
       
@@ -288,17 +243,24 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
         de := Dimension( Eigenspace( inv, -1 ));
     until de ge eiglim1 and de le eiglim2;
     vprint SymSquareVerbose: "#   Inv found dim", dim, "in ", Cputime()-cputm;
-          
-    NrGensCentInv := 10; 
+    
+    // completion checking function
+    
+    /* __compcheck := function( G, C, g ) 
+        
+         DC := MyDerivedGroupMonteCarlo( C );
+         mins := MinimalSubmodules( GModule( DC ) : Limit := 4 );
+         
+         return #mins eq 3 and &+[ Dimension( x ) : x in mins ] eq dimg;
+    end function; */
+      
+    NrGensCentInv := 10; //case< dim | 5: 30, 6: 30, default: 20 >;
     __compcheck := func< G, C, g | NumberOfGenerators( C ) ge NrGensCentInv >;
     
-    /* Next we find the generating set of the centralizer of the involution.
-       We add generators until the the natural module of < gensC > has precisely three 
-       components. */
-
     gensC := []; gensCD := [];
- 
-    repeat            
+    numberofminsubs := case< type | "Omega+": 4, default: 3 >;
+    repeat   
+             
         C := CentraliserOfInvolution( G, inv : 
                      CompletionCheck := __compcheck );  
         CD := MyDerivedGroupMonteCarlo( C : 
@@ -309,7 +271,8 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
         CD := sub< Universe( gensCD ) | gensCD >;
         M := GModule( CD ); 
         mins := [ x : x in MinimalSubmodules( M : Limit := 4 )];
-    until  #mins eq 3 and &+[ Dimension( x ) : x in mins ] eq dimg;
+    until  #mins eq numberofminsubs 
+           and &+[ Dimension( x ) : x in mins ] eq dimg;
 
     vprint SymSquareVerbose: "#   Cent comput dim", dim, "took ", 
       Cputime()-cputm, #gensC, "gens used.";
@@ -325,17 +288,8 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
     mT := [ mins[x] : x in [1..#mins] | (M!mins[x].1)^inv eq -M!mins[x].1 ][1];
     
     dimH := Dimension( mH ); dimK := Dimension( mK ); dimT := Dimension( mT );
-
     dH := SolveSymSquareDimEq( dimH ); dK := SolveSymSquareDimEq( dimK ); 
-    assert dimT eq dH*dK;
-
-    // we want dH to be even-dimensional. if it is not, then we swap
-
-    if IsOdd( dH ) then 
-        t := dH; dH := dK; dK := t;
-        t := dimH; dimH := dimK; dimK := t;
-        t := mH; mH := mK; mK := t;
-    end if;        
+    assert Dimension( mT ) eq dH*dK;
     
     // set up the projections into the components
     
@@ -356,11 +310,12 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
     mns := GL( dimT, q )!ScalarMatrix( GF( q ), dimT, -1 );
     
     for i in [1..#gensCD] do
-        gi := gensCD[i]@at;
-        if MinimalPolynomial( gi ) eq MinimalPolynomial( mns*gi) then
+        if MinimalPolynomial( gensCD[i]@at ) eq 
+              MinimalPolynomial( mns*(gensCD[i]@at)) then
            repeat
-               x := Random( CD ); xa := x@at;
-           until MinimalPolynomial( xa ) ne MinimalPolynomial( mns*xa );
+               x := Random( CD );
+           until MinimalPolynomial( x@at ) ne
+                 MinimalPolynomial( mns*(x@at));
            gensCD[i] := x;
        end if;
     end for;
@@ -374,19 +329,45 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
     aK := sub< GL( dimK, q ) | [ x@ak : x in gensCD ]>;
 
     assert IsIrreducible( aH ) and IsIrreducible( aK );
+
+   /* if < dH, q > ne < 2, 3 > and < type, dH, q > ne < "SU", 2, 9 > then 
+        aH := MyDerivedGroupMonteCarlo( aH );
+    end if; */
+    
+   /* if < dK, q > ne < 2, 3 > and < type, dH, q > ne < "SU", 2, 9 > then
+        aK := MyDerivedGroupMonteCarlo( aK );
+    end if; */
      
-    // the recursive call to recognise the smaller-dimensional sym squares aH and aK
     _, b1, c1, bas1 := RecogniseSymSquareFunc( aH : type := type );
     _, b2, c2, bas2 := RecogniseSymSquareFunc( aK : type := type );
     
-    // bas1 is [e11, e12,...,e1k,...,ekk]
+    // bas1 is [e11, e12,...,a1k,...,akk]
     // bas2 is [e{k+1}{k+1},...,edd]
-
+      
     bas1 := [ M!(&+[bas1[j][i]*Basis( mH )[i] : 
                  i in [1..dimH]]) : j in [1..dimH]];
     bas2 := [ M!(&+[bas2[j][i]*Basis( mK )[i] : 
                  i in [1..dimK]]) : j in [1..dimK]];
-            
+    
+    /* we place the basis vectors computed in bas1 and bas2 into their place
+       in the basis of V */
+      
+    bas := [ Zero( M ) : x in [1..dim]];
+    
+    for i in [1..dH] do
+        for j in [i..dH] do
+            bas[funcpos_symsquare( dim, i, j )] := 
+              bas1[funcpos_symsquare( dH, i, j )];
+        end for;
+    end for;
+    
+    for i in [dH+1..dim] do
+        for j in [i..dim] do
+            bas[funcpos_symsquare(dim, i, j )] := 
+              bas2[funcpos_symsquare( dK, i-dH, j-dH )];
+        end for;
+    end for;
+    
     /* Construct the image of C in the tensor product component. It must be 
        isomorphic to the tensor product of the preimages of the 
        groups induced on the sym square components */
@@ -407,27 +388,32 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
 
     for i in listch do
         genstt[i] := mns*genstt[i];
-        //assert MinimalPolynomial( genstt[i] ) eq MinimalPolynomial( genst[i] );
+        assert MinimalPolynomial( genstt[i] ) eq MinimalPolynomial( genst[i] );
     end for;
-     
-    // get the isomorphism between the two GModules 
+    
     TT := GModule( sub< GL( dimT, q ) | genstt >);
     v, al := IsIsomorphic( T, TT );
     
     if not v then
-        error( "Module isomorphism is not found for the tensor product in dim", dimg );
+        error( "Module isomorphism is not found for the tensor product in dim",                dimg );
     end if;
-
+    
+    /* vprint SymSquareVerbose: "#   Tensor isom dim", dim, "took ", 
+      Cputime()-tensortm; */
+        
+    /* find the vectors eij with 1 <= j <= dH and dH+1 <= j <= dimg and 
+       insert them into their place in bas. */
     V := VectorSpace( GF( q ), dimT );
-    tbas := [ M!(mT!(V!x)*(al^-1)) : x in [ Basis( T )[i] : i in [1..dimT]]];
-
-    // assgn the basis matrix to G that reflects the decomposition
-    AssignBasisFromComponents( ~G, dH, dK, GF( q ) : type := type );
-
-    // Build the basis from the bases of the components
-    bas := BuildBasisOmega( G, bas1, bas2, tbas : type := type, 
-                typeh := type, typek := type );
-    tr := GL( dimg, q )!bas; //[ Eltseq( x ) : x in bas ];
+    tbas := [ M!(mT!(V!Eltseq( x ))*(al^-1)) : //(tbas0^-1*al^-1)) : 
+              x in [ Basis( T )[i] : i in [1..dimT]]];
+    
+    for i in [1..dH] do
+        for j in [dH+1..dim] do
+            bas[funcpos_symsquare( dim, i, j )] := tbas[(i-1)*dK+j-dH];
+        end for;
+    end for;
+    
+    tr := GL( dimg, q )![ Eltseq( x ) : x in bas ];
         
     /* Finally we have a complete basis. However, the vectors 
        eij that were returned by the tensor recognition  
@@ -438,25 +424,22 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
        Then the scalar c and the possible non-square factor z0 can be 
        picked up by considering the value of
        test[1,dH+1]*test[1,dH+2]*(2*test[1,1]*test[1,z])^-1. 
-       where z is the position of e_{dH+1,dH+2} in our basis. This value should be c^2*z0. */
+       where z is the position of e_{dH+1,dH+2} in our basis. This value
+       of this should be c^2*z0. */
 
     z0 := PrimitiveElement( GF( q ));
     
-    pos := funcpos_symsquare( dim, dH div 2+1, dH div 2+2 );
+    pos := funcpos_symsquare( dim, dH+1, dH+2 );
     repeat 
         test := Random( G )^(tr^-1);
     until test[1,1] ne 0 and test[1,pos] ne 0;
     
-    lambdasq := test[1,dH div 2+1]*test[1,dH div 2+2]*(2*test[1,1]*test[1,pos])^-1;
+    lambdasq := test[1,dH+1]*test[1,dH+2]*(2*test[1,1]*test[1,pos])^-1;
 
-    // set up the index sets that correspond to the subspaces H and K
-    rangeH := [1..dH div 2] cat [dim-dH div 2+1..dim];
-    rangeK := [dH div 2+1..dim-dH div 2];
- 
     try 
       lambda := Sqrt( lambdasq ); 
-      for i in rangeH do
-          for j in rangeK do
+      for i in [1..dH] do
+          for j in [dH+1..dim] do
               pos := funcpos_symsquare( dim, i, j );
               // multiply eij by lambda
               bas[pos] := lambda*bas[pos];
@@ -464,17 +447,16 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
       end for;
     catch e 
       lambda := Sqrt( z0*lambdasq ); 
-      for i in rangeH do
-          for j in rangeK do
+      for i in [1..dH] do
+          for j in [dH+1..dim] do
               pos := funcpos_symsquare( dim, i, j );
               // multiply eij by lambda
               bas[pos] := lambda*bas[pos];
           end for;
       end for;
     
-      for i in rangeH do
-          for j in rangeH do
-              if j lt i then continue; end if;
+      for i in [dH+1..dim] do
+          for j in [i..dim] do
               pos := funcpos_symsquare( dim, i, j );
               // multiply eij by z0
               bas[pos] := z0*bas[pos];
@@ -482,7 +464,7 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
       end for;
     end try;
 
-    tr := GL( dimg, q )!bas;//[ Eltseq( x ) : x in bas ];
+    tr := GL( dimg, q )![ Eltseq( x ) : x in bas ];
     
     // construct the maps between GL(dim,q) and G
     
@@ -523,9 +505,9 @@ intrinsic RecogniseSymSquare( G::GrpMat : type := "SL", CheckResult := true )
   dim := Dimension( G );                         
   p := Characteristic( CoefficientRing( G ));
   error if p eq 2, "the field cannot have characteristic 2";
-  error if type eq "SL" and dim lt 3, "SL needs to have dimension at least 3";
-  error if type eq "Sp" and dim lt 27, "Sp needs to have dimension at least 8";
-  error if type eq "SU" and dim lt 27, "SU needs to have dimension at least 8"; 
+  //error if type eq "SL" and dim lt 3, "SL needs to have dimension at least 3";
+  //error if type eq "Sp" and dim lt 27, "Sp needs to have dimension at least 8";
+  //error if type eq "SU" and dim lt 27, "SU needs to have dimension at least 8"; 
   error if <type,dim,p> eq <"Omega+",54,3>, "Omega+(10,q) is not implemented for char 3"; 
   error if <type,dim,p> eq <"Omega-",54,3>, "Omega-(10,q) is not implemented for char 3"; 
   error if <type,dim,p> eq <"Omega",44,5>, "Omega(9,q) is not implemented for char 5"; 

@@ -1,0 +1,224 @@
+    /* we place the basis vectors computed in basH, basK and basT
+      into their place in the basis of V */
+      
+    bas := []; basprime := [];
+    
+    // the indices 1..dH/2 and dim-dH/2+1..dim belong to the H-space
+    ind_h := [1..dH/2] cat [dim-dH/2+1..dim];
+    // the rest of the indices belong to the K-space
+    ind_k := [dH/2+1..dim-dH/2];
+    
+    /* we need to compute the inverse of the matrix 
+      1 0 0 ... -1
+      0 1 0 ... -1
+            ...
+      1 1 1      1 
+      both in the dimension of H and in the dimension of K */
+      
+    math := ZeroMatrix( GF( q ), dH div 2, dH div 2 );
+    matk := ZeroMatrix( GF( q ), dK div 2, dK div 2 );
+    
+    for i in [1..dH/2-1] do
+        math[i,i] := 1;
+        math[i,dH div 2] := -1;
+    end for;
+    
+    for i in [1..dH div 2] do
+        math[dH div 2,i] := 1;
+    end for;
+    
+    for i in [1..dK div 2-1] do
+        matk[i,i] := 1;
+        matk[i,dK div 2] := -1;
+    end for;
+    
+    for i in [1..dK div 2] do
+        matk[dK div 2,i] := 1;
+    end for;
+    
+    math := math^-1;
+    matk := matk^-1;
+    
+    // the end of the computation of the matrices
+      
+    /* we compute the vector that corresponds to the vector 
+       dim/2 wedge (dim/2+1).
+      
+       this vector is computed by computing the linear combination
+       m[1] [1 wedge (dK-1)] + ... + m[dK/2-1] [dK/2-1 wedge dK/2+2] ...
+       - the m[dK/2] w where
+       m[1,2,...,dK/2] is the last row of the matrix matk and 
+       w is the vector in basOneDim */
+      
+    vecddplus1 := &+[ matk[dK div 2,m]*basK[ 
+                          funcpos_altsquare(dK,m,dK-m+1 : 
+                                  type := "Sp")] 
+                      : m in [1..dK div 2-1]];
+    vecddplus1 := vecddplus1 - matk[dK div 2,dK div 2]*basOneDim[1];
+    vecddplus1prime := vecddplus1 - matk[dK div 2,dK div 2]*(-basOneDim[1]);
+    
+    // now we place the basis vectors into their right place
+    
+    for i in [1..dim] do
+        for j in [i+1..dim] do 
+            
+            // computing i wedge j
+              
+            if i in ind_h and j in ind_h then
+                
+                /* both i and j are H-vectors
+                  
+                   the pair <i,j> corresponds to the pair 
+                   <i1,j1> in the H-space */
+                                    
+                if i gt dH/2 then 
+                    i1 := i-dK;
+                else
+                    i1 := i;
+                end if;
+                
+                if j gt dH/2 then
+                    j1 := j-dK;
+                else
+                    j1 := j;
+                end if;
+                
+                // calculate which function we need to take from H
+                posH := funcpos_altsquare( dH, i1, j1 : type := "Sp" );
+                // the position of the vector in the right basis    
+                pos, flag := funcpos_altsquare( dim, i, j : type := "Sp" );
+                
+                /* if flag was not flagged then we just place it ...
+                        into the right place */ 
+                if not flag then
+                    bas[pos] := basH[posH];
+                    basprime[pos] := bas[pos];
+                                        
+                elif flag then
+                    /* if flag was flagged then we need to place 
+                       i wedge j - dim/2 wedge dim/2+1 into this ...
+                       position.
+                      Thus we calculate i wedge j first */
+                    bas[pos] := &+[ math[i1,m]*basH[ 
+                                         funcpos_altsquare(dH,m,dH-m+1 : 
+                                                 type := "Sp")] 
+                                    : m in [1..dH/2-1]];
+                    bas[pos] := bas[pos] + math[i1,dH div 2]*basOneDim[1];
+                    basprime[pos] := bas[pos] + 
+                                     math[i1,dH div 2]*(-basOneDim[1]);
+                    //  now bas[pos] holds i wedge j
+                    bas[pos] := bas[pos] - vecddplus1;
+                    basprime[pos] := basprime[pos] - vecddplus1prime;
+                end if;
+                                    
+            elif i in ind_k and j in ind_k then
+                
+                /* this is the case when i and j are K-vectors
+                   the same business as above */
+                
+                i1 := i-dH div 2;
+                j1 := j-dH div 2;
+                
+                posK, flagK := funcpos_altsquare( dK, i1, j1 : type := "Sp" );
+                pos, flag := funcpos_altsquare( dim, i, j : type := "Sp" );
+                if posK ne 0 then
+                    bas[pos] := basK[posK];
+                    basprime[pos] := bas[pos];
+                end if; 
+                
+            elif i in ind_h and j in ind_k then
+                
+                // when i is an H-index and j is a K-index
+                
+                i1 := i; 
+                j1 := j-dH/2;
+                                
+                posT := Round( (i1-1)*dK+j1 );
+                
+                pos := funcpos_altsquare( dim, i, j : type := "Sp" );
+                bas[pos] := basT[posT];
+                basprime[pos] := bas[pos];
+                
+            elif i in ind_k and j in ind_h then 
+                                
+                i1 := i-dH/2;
+                j1 := j-dK;
+                
+                posT := Round( (j1-1)*dK+i1 );
+                
+                pos := funcpos_altsquare( dim, i, j : type := "Sp" );
+                bas[pos] := -basT[posT];
+                basprime[pos] := bas[pos];
+            end if;
+            
+        end for;
+    end for;
+    
+    tr := GL( dimg, q )![ Eltseq( x ) : x in bas ];
+    
+    p12 := funcpos_altsquare( dim, 1, 2 : type := "Sp" );
+    p13 := funcpos_altsquare( dim, 1, 3 : type := "Sp" );
+    p23 := funcpos_altsquare( dim, 2, 3 : type := "Sp" );
+    p14 := funcpos_altsquare( dim, 1, 4 : type := "Sp" );
+    p34 := funcpos_altsquare( dim, 3, 4 : type := "Sp" );
+    
+    repeat
+        x := Random( G )^(tr^-1);
+        mat1 := Matrix( GF( q ), 3, 3, [
+                        x[p12,p12],    x[p12,p13],    x[p12,p23],
+                        x[p13,p12],    x[p13,p13],    x[p13,p23],        
+                        x[p23,p12],    x[p23,p13],    x[p23,p23]] );
+        
+        mat2 := Matrix( GF( q ), 3, 3, [
+                        x[p13,p13],    x[p13,p14],    x[p13,p34],
+                        x[p14,p13],    x[p14,p14],    x[p14,p34],        
+                        x[p34,p13],    x[p34,p14],    x[p34,p34]] );
+        
+        mm1 := __funcSLdqToAltSquare( mat1 );
+        mm2 := __funcSLdqToAltSquare( mat2 );
+        
+    until Determinant( mat1 ) ne 0 and Determinant( mat2 ) ne 0 and 
+          mm1[1,3] ne 0 and mm1[1,1] ne 0 and mm2[1,2] ne 0 and mm2[1,1] ne 0;
+    
+    mm2 := mm1[1,1]*mm2[1,1]^-1*mm2;
+    lambdasq := mm1[1,3]/mm2[1,2];
+    
+    try 
+      lambda := Sqrt( lambdasq );  print lambda;
+      print "OK";
+      for i in [1..dH/2] cat [dim-dH/2+1..dim] do
+          for j in [dH/2+1..dim-dH/2] do
+              if i lt j then
+                  pij := funcpos_altsquare( dim, i, j : type := "Sp" );
+              else
+                  pij := funcpos_altsquare( dim, j, i : type := "Sp" );
+              end if;
+              bas[pij] := lambda*bas[pij];
+              basprime[pij] := bas[pij];
+          end for;
+      end for; 
+    catch e  print "exception";
+      z0 := PrimitiveElement( GF( q ));
+      lambda := Sqrt( z0*lambdasq ); 
+      for i in [1..dH/2] cat [dim-dH/2+1..dim] do
+          for j in [dH/2+1..dim-dH/2] do
+              if i lt j then
+                  pij := funcpos_altsquare( dim, i, j : type := "Sp" );
+              else
+                  pij := funcpos_altsquare( dim, j, i : type := "Sp" );
+              end if;
+              bas[pij] := lambda*bas[pij];
+          end for;
+      end for; 
+          
+      for i in [dH/2+1..dim-dH/2] do
+          for j in [i+1..dim-dH/2] do
+              pij := funcpos_altsquare( dim, i, j );
+              // multiply eij by z0
+              bas[pij] := z0*bas[pij];
+          end for;
+      end for;
+    end try;
+      
+    tr := MatrixAlgebra( GF( q ), dimg )![ Eltseq( x ) : x in bas ];
+    trprime := MatrixAlgebra( GF( q ), dimg )![ Eltseq( x ) : x in basprime ];

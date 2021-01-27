@@ -9,11 +9,13 @@ import "auxfunctions.m": MyDerivedGroupMonteCarlo, IsSimilarToScalarMultiple,
 
 import "symsquare_omega_aux.m":TestBasisOmega, OmegaBasisFromComponents, 
     BuildBasisOmega, TypeOfSymSquareOmega, SymSquareOmegaBasisWithOmegaMinus, 
-    AssignBasisFromComponents;
+    AssignOmegaBasisFromComponents;
+
+
+AddAttribute( GrpMat, "BasisMatrixFromComponents" );
 
 // The main function 
 forward RecogniseSymSquareOmegaFunc;
-
 RecogniseSymSquareOmegaFunc := function( G : 
                             type := "Omega+", 
                             CheckResult := true,
@@ -203,6 +205,7 @@ RecogniseSymSquareOmegaFunc := function( G :
         t := mH; mH := mK; mK := t;
     end if;        
 
+    print dH, dK;
     dT := dH*dK;
     assert Dimension( mT ) eq dT;
     
@@ -222,6 +225,9 @@ RecogniseSymSquareOmegaFunc := function( G :
        the projection by ah and ak should fall into SL.     
        If some generator fails to satisfy this, it is thrown away and is 
        replaced by another one. */  
+
+    mnsh := GL( dimH, q )!ScalarMatrix( GF( q ), dimH, -1 );
+    mnsk := GL( dimK, q )!ScalarMatrix( GF( q ), dimK, -1 );
         
     // TODO: check if this is needed in this version. I suspect not.    
         
@@ -230,7 +236,7 @@ RecogniseSymSquareOmegaFunc := function( G :
               Determinant( gensCD[i]@ak ) ne 1 or 
               IsSimilarToScalarMultiple( gensCD[i]@ah ) or
               IsSimilarToScalarMultiple( gensCD[i]@ak ) or 
-              IsSimilarToScalarMultiple( gensCD[i]@at ) then
+              IsSimilarToScalarMultiple( gensCD[i]@at )then
            repeat
                x := Random( CD );
            until Determinant( x@ah ) eq 1 and
@@ -244,44 +250,29 @@ RecogniseSymSquareOmegaFunc := function( G :
    
    CD:= sub< Universe( gensCD ) | gensCD >;
 
-   if dH lt 9 or dK lt 9 or <dK,p> eq <9,5>  then Method := "Tensor"; end if;
+   if dH lt 9 or dK lt 9 then Method := "Tensor"; end if;
 
    if Method eq "Recursion" then 
         // ************* RECURSIVE CODE STARTS HERE ****************
         aH := sub< GL( dimH, q ) | [ x@ah : x in gensCD ]>;
         aK := sub< GL( dimK, q ) | [ x@ak : x in gensCD ]>;
 
-
-        v1, typeh := LieType( aH, q ); assert v1;
-        typeh := case< typeh[1] | "D": "Omega+", "2D": "Omega-", "B": "Omega", 
-                        default: false >;
-        if type eq "Omega+" then
-            typek := "Omega+";
-        elif type eq "Omega" then 
-            typek := "Omega";
-        elif type eq "Omega-" and typeh eq "Omega+" then 
-            typek := "Omega-";
-        elif type eq "Omega-" and typeh eq "Omega-" then 
-            typek := "Omega+";
-        end if;
-
-        if typeh eq "Omega-" and typek eq "Omega+" then 
-            t := dH; dH := dK; dK := t;
-            t := dimH; dimH := dimK; dimK := t;
-            t := mH; mH := mK; mK := t;
-            t := ah; ah := ak; ak := t;
-            t := aH; aH := aK; aK := t;
-            typeh := "Omega+"; typek := "Omega-";
-        end if;        
-
-
-        vprint SymSquareVerbose: "# types of components are ", typeh, typek, "of dims", 
-                    dH, dK;
+        error(111);
+        typeh := "Omega+"; typek := "Omega";
+       // error(1);
 
         // the recursive call to recognise the smaller-dimensional sym squares aH and aK
-    
-        vh, b1, c1, bas1 := RecogniseSymSquareOmegaFunc( aH : type := typeh );
-        vk, b2, c2, bas2 := RecogniseSymSquareOmegaFunc( aK : type := typek );
+        
+        try 
+            vh, b1, c1, bas1 := RecogniseSymSquareOmegaFunc( aH : type := typeh );
+            vk, b2, c2, bas2 := RecogniseSymSquareOmegaFunc( aK : type := typek );
+        catch e
+            print typeh, typek;
+            print("recursive call failed, returning the two groups");
+            //vh, b1, c1, bas1 := RecogniseSymSquareOmegaFunc( aH : type := "Omega-" );
+            //vk, b2, c2, bas2 := RecogniseSymSquareOmegaFunc( aK : type := "Omega-" );
+            return aH, aK;
+        end try;
 
         assert vh and vk;
         // bas1 is [e11, e12,...,e1k,...,ekk]
@@ -529,12 +520,12 @@ RecogniseSymSquareOmegaFunc := function( G :
     // ********************** TENSOR DECOMP SPECIFIC CODE ENDS HERE **************
     end if;
 
-    if not assigned ww then ww := 1/2; end if;
-    //if dH eq 12 and dK eq 9 then error(11111); end if;
-    AssignBasisFromComponents( ~G, dH, dK, GF( q ) : type := type, 
+    if not assigned ww then ww := 1; end if;
+ 
+    AssignOmegaBasisFromComponents( ~G, dH, dK, GF( q ) : type := type, 
                                                     typeh := typeh, 
                                                     typek := typek,
-                                                        ww := ww ); 
+                                                    ww := ww ); 
     
     if not pdivdim then
         basOneDim := [ M!(Basis( monedim )[1])]; wH := basOneDim[1];
@@ -553,11 +544,11 @@ RecogniseSymSquareOmegaFunc := function( G :
                                                typeh := typeh, 
                                                typek := typek,
                                                wH := basOneDim[1], 
-                                               ww := ww );
+                                               ww := ww );    
     tr := GL( dimg, q )!bas;
     g := sub< GL( dimg, q ) | { bas*x*bas^-1 : x in Generators( G0 )}>;
     form := ClassicalForms( g )`bilinearForm;
-
+    
     posT := funcpos_symsquare( dim, dim-dH div 2, dim : type := type );
     if pdivdim then posT := posT-1; end if;
     
@@ -683,7 +674,8 @@ RecogniseSymSquareOmegaFunc := function( G :
         
         elif type eq "Omega" and typeh eq "Omega-" then
                 
-            auxmat, vals := OmegaBasisFromComponents( G );
+            auxmat, vals := 
+                        OmegaBasisFromComponents( G );
             aa := vals[1]; awH := vals[2]; awK := vals[3]; 
             wHwH := vals[4]; wKwK := vals[5];
             
@@ -740,7 +732,8 @@ RecogniseSymSquareOmegaFunc := function( G :
     return true, a, b, tr;
 end function;
 
-RecogniseSymSquareOmegaFunc_ := function( G : type := "Omega+", 
+
+RecogniseSymSquareWithTensorDecompositionOmegaFunc := function( G : type := "Omega+", 
     CheckResult := true )
     
     cputm := Cputime();
@@ -936,6 +929,9 @@ RecogniseSymSquareOmegaFunc_ := function( G : type := "Omega+",
        the projection by ah and ak should fall into SL.     
        If some generator fails to satisfy this, it is thrown away and is 
        replaced by another one. */  
+
+    mnsh := GL( dimH, q )!ScalarMatrix( GF( q ), dimH, -1 );
+    mnsk := GL( dimK, q )!ScalarMatrix( GF( q ), dimK, -1 );
         
     // TODO: check if this is needed in this version. I suspect not.    
         
@@ -1102,7 +1098,7 @@ RecogniseSymSquareOmegaFunc_ := function( G : type := "Omega+",
         ww := 1/2;
     end if;
     
-    AssignBasisFromComponents( ~G, dH, dK, GF( q ) : type := type, 
+    AssignOmegaBasisFromComponents( ~G, dH, dK, GF( q ) : type := type, 
                                                           typeh := typeh, 
                                                           typek := typek,
                                                           ww := ww );

@@ -1,0 +1,2 @@
+some changes to altsquare_sp.m
+

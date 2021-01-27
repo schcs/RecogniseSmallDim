@@ -4,7 +4,7 @@ import "greenhill.m":__funcAltSquareToSLdq_func;
 // solve the equation m = d(d+1)/2
   
 SolveSymSquareDimEq := function( m : type := "SL" )
-
+    
     if type in { "Omega+", "Omega-", "Omega" } then
         m := m+1;
     end if;
