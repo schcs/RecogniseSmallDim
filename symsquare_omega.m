@@ -154,7 +154,7 @@ RecogniseSymSquareOmegaFunc := function( G :
         CD := sub< Universe( gensCD ) | gensCD >;
         M := GModule( CD );
         mins := [ x : x in MinimalSubmodules( M : Limit := 4 )]; 
-        error(1111);
+
         if #mins ne numberofminsubs or  &+[ Dimension( x ) : x in mins ] ne dimg or 
                 __isonefactoromegaminus( mins ) then
             delete inv;
@@ -366,7 +366,7 @@ RecogniseSymSquareOmegaFunc := function( G :
         /* the dimensions dt1 and dt2 of the tensor factors must be equal to 
         dH and dK in this order. If not, we must swap H and K. */
                                     
-        if dt1 ne dH then print "swap";
+        if dt1 ne dH then
             temp := dH; dH := dK; dK := temp;
             temp := dimH; dimH := dimK; dimK := temp;
             temp := ah; ah := ak; ak := temp;
@@ -586,7 +586,7 @@ RecogniseSymSquareOmegaFunc := function( G :
             end for; 
         end if;
 
-        if typeh eq "Omega-" then  print( "hhhhhhhhhhhh");
+        if typeh eq "Omega-" then  
             trh := IdentityMatrix( GF( q ), dH );
             for i in [1..dH div 2 -1 ] do 
                 trh[i,i] := z;

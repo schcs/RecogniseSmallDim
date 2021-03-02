@@ -126,9 +126,18 @@ SplitClassicalSpaceIntoComponents := function( d1, d2, F, type :
            delta*delta1+gamma*gamma1 = delta*gamma+delta1*gamma1 = 0. 
            
            It turns out that the following is a solution of these equations. */
-        
-        delta := Sqrt( F!(-1/8) ); gamma := delta;
-        delta1 := delta; gamma1 := -gamma;
+
+        while true do
+            delta := Random( F );
+            v, gamma := IsSquare( -1/4-delta^2 );
+            if not v then continue; end if;
+            gamma1 := delta;
+            delta1 := -gamma;
+            break;
+        end while;
+
+        //delta := Sqrt( F!(-1/8) ); gamma := delta;
+        //delta1 := delta; gamma1 := -gamma;
         
         //gamma1 := -gamma; delta1 := delta;
 
@@ -302,7 +311,7 @@ end function;
 /* this function determines the orthogonal type of the large component of the 
     symmetric square of Omega*( d, q ) */
 
-TypeOfSymSquareOmega := function( type, d, q )
+/* TypeOfSymSquareOmega := function( type, d, q )
 
     if (type eq "Omega" and IsEven( d )) or 
         (type in {"Omega+", "Omega-"} and IsOdd( d )) then 
@@ -354,7 +363,7 @@ TypeOfSymSquareOmega := function( type, d, q )
         return "orthogonalminus";
     end if;
 
-end function;
+end function; */
 
 
 BuildBasisOmega := function( G, basH, basK, basT : type := "Omega+", 
