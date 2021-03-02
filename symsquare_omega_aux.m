@@ -109,7 +109,41 @@ SplitClassicalSpaceIntoComponents := function( d1, d2, F, type :
     
     elif type eq "Omega+" and typeh eq "Omega-" then 
 
-        error( "option not yet implemented" );
+        // should only occur when q is cong to 3 mod 4
+        assert q mod 4 eq 3;
+        mid := d div 2;
+        
+        /* we have to produce vectors w1, w2, z1, z1 such that 
+           (wi,wj) = (zi,zj) = delta_{ij} and <w1,w2> is orthogonal to <z1,z2> */
+
+        // w1 is e_mid + (1/2)f_mid -- w2 is e_{m-d-1}+1/2*f_(mid-1)
+        w1 := V.mid+(1/2)*V.(mid+1); w2 := V.(mid-1)+(1/2)*V.(mid+2);
+
+        /* choose gamma, delta, delta1, gamma1  such that 
+           gamma1 = -gamma
+           delta1 = delta
+           delta^2 + gamma^2 = delta1^2 + gamma1^2 = -1/4
+           delta*delta1+gamma*gamma1 = delta*gamma+delta1*gamma1 = 0. 
+           
+           It turns out that the following is a solution of these equations. */
+        
+        delta := Sqrt( F!(-1/8) ); gamma := delta;
+        delta1 := delta; gamma1 := -gamma;
+        
+        //gamma1 := -gamma; delta1 := delta;
+
+        assert gamma^2+delta^2 eq -1/4 and gamma1^2 + delta1^2 eq -1/4 and 
+                gamma*gamma1+delta*delta1 eq 0 and gamma*delta+gamma1*delta1 eq 0;
+
+        //gamma1 := Sqrt( -1/4/(gamma^2/delta^2+1));
+        //delta1 := gamma*gamma1/delta;
+        z1 := -2*delta*V.(mid-1)-2*gamma*V.mid+gamma*V.(mid+1)+delta*V.(mid+2);
+        z2 := -2*delta1*V.(mid-1)-2*gamma1*V.mid+gamma1*V.(mid+1)+delta1*V.(mid+2);
+
+        bas1 := [ V.i : i in [1..d1 div 2 -1 ]] cat [z1,z2] cat 
+                [ V.i : i in [d-d1 div 2 + 2 .. d]];
+        bas2 := [ V.i : i in [d1 div 2 .. mid - 2 ]] cat [w1,w2] cat 
+                [ V.i : i in [mid +3 .. d-d1 div 2 +1]];
 
     else 
 
@@ -155,6 +189,34 @@ _st_formsymsquare_orth_circle := function( d, u, v )
 
     return a;
 end function;
+
+// the value of the standard form of ort_plus
+
+_st_ort_form_plus := func< d, i, j |
+        case< i+j eq d+1 | true: 1, false: 0, default: -1 >>;
+
+// the value of the standard form on the symmetric square of a space of type ort__plus
+
+_st_formsymsquare_orth_plus := function( d, u, v )
+            
+    a := 0;
+
+    for i in [1..d*(d+1)/2] do 
+        for j in [1..d*(d+1)/2] do 
+            if u[i] ne 0 and v[j] ne 0 then 
+                pi := funcposinv_symsquare( d, i );
+                pj := funcposinv_symsquare( d, j );
+                a := a+u[i]*v[j]*( _st_ort_form_plus( d, pi[1], pj[1] )*
+                _st_ort_form_plus( d, pi[2], pj[2] ) + 
+                _st_ort_form_plus( d, pi[1], pj[2] )*
+                _st_ort_form_plus( d, pi[2], pj[1] ))/2;
+            end if;
+        end for;
+    end for;
+
+    return a;
+end function;
+
 
 /*
   Suppose that V is s classical space and U and W are two non-degenerate subspaces. Then 
@@ -204,7 +266,6 @@ AssignBasisFromComponents := procedure( ~G, d1, d2, F :
         bas := basH[1..dH] cat basK[1..dK] cat basT[1..dT];
     end if;
 
-
     if type eq "Omega" and typeh eq "Omega-" then
         a := Zero( Parent( basH[1] ));
         d := d1+d2;
@@ -213,7 +274,16 @@ AssignBasisFromComponents := procedure( ~G, d1, d2, F :
         awH := _st_formsymsquare_orth_circle( d, a, basH[#basH] );
         awK := _st_formsymsquare_orth_circle( d, a, basK[#basK] );
         wHwH := _st_formsymsquare_orth_circle( d, basH[#basH], basH[#basH] );
-        wKwK := _st_formsymsquare_orth_circle( d, basK[#basK], basK[#basK] );  
+        wKwK := _st_formsymsquare_orth_circle( d, basK[#basK], basK[#basK] );
+    elif type eq "Omega+" and typeh eq "Omega-" then
+        a := Zero( Parent( basH[1] ));
+        d := d1+d2;
+        a[d] := 1; a[funcpos_symsquare( d, d div 2, d div 2 + 1 )] := -1;
+        aa := _st_formsymsquare_orth_plus( d, a, a );
+        awH := _st_formsymsquare_orth_plus( d, a, basH[#basH] );
+        awK := _st_formsymsquare_orth_plus( d, a, basK[#basK] );
+        wHwH := _st_formsymsquare_orth_plus( d, basH[#basH], basH[#basH] );
+        wKwK := _st_formsymsquare_orth_plus( d, basK[#basK], basK[#basK] );  
     else 
         aa := 0; awH := 0; awK := 0; wHwH := 0; wKwK := 0;            
     end if;
@@ -360,7 +430,7 @@ TestBasisOmega := function( G, basH, basK, basT, wH, wK, g : type := "Omega+",
 
     F := CoefficientRing( g );    
     scalars := [ <a,b,c,d > : a in [1,-1], b in [1,-1], c in [1,-1], 
-                 d in [ 1, -1 ]]; 
+                 d in [ 1,-1 ]]; 
     results := [];
     maxzero := 0;
     for s in scalars do 
