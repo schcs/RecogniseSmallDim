@@ -125,7 +125,7 @@ SplitClassicalSpaceIntoComponents := function( d1, d2, F, type :
            delta^2 + gamma^2 = delta1^2 + gamma1^2 = -1/4
            delta*delta1+gamma*gamma1 = delta*gamma+delta1*gamma1 = 0. 
            
-           It turns out that the following is a solution of these equations. */
+           We find the right values by random selection. */
 
         while true do
             delta := Random( F );
