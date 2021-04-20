@@ -98,7 +98,8 @@ end function;
   
       
 RecogniseAltSquareWithTensorDecomposition := function( G : 
-                                         type := "SL", CheckResult := true )
+                                         type := "SL", 
+                                         CheckResult := true )
     cputm := Cputime(); 
     q := #CoefficientRing( G ); 
     dimg := Dimension( G );
@@ -807,8 +808,9 @@ intrinsic RecogniseAltSquare( G::GrpMat :
   error if type eq "Omega" and dim lt 55, "Omega needs to have dimension at least 11";
       
   if type eq "Sp" then
-      return RecogniseAltSquareWithTensorDecompositionSp( G : 
-      CheckResult := CheckResult );
+      return RecogniseAltSquareSpFunc( G : 
+      CheckResult := CheckResult,
+      Method := Method );
   end if;
                                                                        
   // in small dimension, call other functions
