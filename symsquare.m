@@ -18,6 +18,7 @@ import "smalldimreps.m":__funcSLdqToSymSquare,
 import "auxfunctions.m": MyDerivedGroupMonteCarlo;
 import "symsquare_omega.m":RecogniseSymSquareOmegaFunc;
 import "symsquare_omega_aux.m":AssignBasisFromComponents, BuildBasisOmega;
+import "recogsmalldim.m":RecogniseSymSquareWithSmallDegree;
 
 AddAttribute( GrpMat, "BasisMatrixFromComponents" );
 
@@ -209,38 +210,21 @@ RecogniseSymSquareDim3 := function( G : type := "SL" )
     
     return true, a, b, tr;
 end function;
-    
-/* The following function performs the recognition procedure by calling 
-   the function RecogniseSmallDegree */
 
-RecogniseSymSquareLowDim := function( G : type  )
+// checks if RecogniseSymSquare works for a given set of paramenters
+IsValidParameterSetForSymSquare := function( type, dim, q )
+    _, p := IsPrimePower( q );
+    if p eq 2 then return false;  
+    elif type in {"SL","Sp","SU" } and dim lt 2 then return false;
+    elif <type,dim,q> eq <"Omega+",10,3> then return false; 
+    elif <type,dim,q> eq <"Omega-",10,3> then return false; 
+    elif type eq "Omega+" and dim lt 10 then return false; 
+    elif type eq "Omega-" and dim lt 8 then return false; 
+    elif type eq "Omega" and dim lt 7 then return false; end if;
 
-    q := #CoefficientRing( G ); 
-    dimg := Dimension( G );
-    
-    // the natural dimension of G
-    dim := SolveSymSquareDimEq( dimg : type := type ); 
-
-    v, g := RecogniseSmallDegree( G, type, dim, q );
-    error(1);
-    gensG := GeneratorsSequence( G ); 
-    gensg := [ __funcSLdqToSymSquare( x : type := type ) : x in GeneratorsSequence( g )];
-    v, tr := IsIsomorphic( GModule( sub< Universe( gensG ) | gensG > ),
-            GModule( sub< Universe( gensg ) | gensg > ));
-    assert v;
-    tr := GL( dimg, q )!tr;
-    error(111);
-
-    // create maps between G and SL( 6, q )
-    a := map< GL( dim, q ) -> GL( dimg, q ) | 
-         x :-> GL( dimg, q )!__funcSLdqToSymSquare( x )^tr >;
-    
-    b := pmap< GL( dimg, q ) -> GL( dim, q ) |
-         x :-> GL( dim, q )!__funcSymSquareToSLdq( x^(tr^-1)) >;
-    
-    return true, a, b, tr;
+    return true;
 end function;
-    
+        
 // The general recursive function. 
 forward RecogniseSymSquareFunc;
 RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
@@ -260,18 +244,17 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
       when 3: return RecogniseSymSquareDim3( G : type := type );
     end case;
 
-    if 
-        <type,dim,p> eq <"Omega+",10,3> or 
-        <type,dim,p> eq <"Omega-",10,3> or  
-        <type,dim,p> eq <"Omega",9,5> or 
-        type eq "Omega+" and dim lt 10 or  
-        type eq "Omega-" and dim lt 8 or  
-        type eq "Omega" and dim lt 9 then
-        
-        return RecogniseSymSquareLowDim( G : type := type );
+    if <type,dim,p> eq <"Omega",9,5> then 
+        return  RecogniseSymSquareWithSmallDegree( G : type := type );
+    elif <type,dim,p> eq <"Omega+",10,3> then 
+        return  RecogniseSymSquareWithSmallDegree( G : type := type );
+    elif <type,dim,p> eq <"Omega-",10,3> then 
+        return  RecogniseSymSquareWithSmallDegree( G : type := type );
+    elif type eq "Omega" and dim lt 9 then
+        return  RecogniseSymSquareWithSmallDegree( G : type := type );
     end if;
 
-    // Recursion does not (yet) work for Omega groups, so we call other function 
+    // For Omega groups we call other function 
 
     if type in { "Omega+", "Omega-", "Omega" } then 
       return RecogniseSymSquareOmegaFunc( G : type := type, CheckResult := CheckResult );
@@ -512,7 +495,8 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
 end function;
 
     
-intrinsic RecogniseSymSquare( G::GrpMat : type := "SL", CheckResult := true ) 
+intrinsic RecogniseSymSquare( G::GrpMat : type := "SL", 
+                                          CheckResult := true ) 
           -> BoolElt, Map, Map, GrpMatElt
                                                          
  {G should be matrix group conjugate to the symmetric square representation
@@ -520,18 +504,13 @@ intrinsic RecogniseSymSquare( G::GrpMat : type := "SL", CheckResult := true )
   G to SL( d, q ), and a matrix whose rows form a basis that exhibits the 
   sym square structure. Supply CheckResult := true to check the final result.}                     
 
-  dim := Dimension( G );                         
-  p := Characteristic( CoefficientRing( G ));
-  error if p eq 2, "the field cannot have characteristic 2";
-  error if type eq "SL" and dim lt 3, "SL needs to have dimension at least 3";
-  error if type eq "Sp" and dim lt 27, "Sp needs to have dimension at least 8";
-  error if type eq "SU" and dim lt 27, "SU needs to have dimension at least 8"; 
-  error if <type,dim,p> eq <"Omega+",54,3>, "Omega+(10,q) is not implemented for char 3"; 
-  error if <type,dim,p> eq <"Omega-",54,3>, "Omega-(10,q) is not implemented for char 3"; 
-  error if <type,dim,p> eq <"Omega",44,5>, "Omega(9,q) is not implemented for char 5"; 
-  error if type eq "Omega+" and dim lt 53, "Omega+ needs to have dimension at least 10"; 
-  error if type eq "Omega-" and dim lt 35, "Omega- needs to have dimension at least 8"; 
-  error if type eq "Omega" and dim lt 43, "Omega needs to have dimension at least 9";
+    dg := Dimension( G );
+    dim := SolveSymSquareDimEq( dg : type := type );
+    q := #CoefficientRing( G );     
 
-  return RecogniseSymSquareFunc( G : type := type, CheckResult := CheckResult );
+    if not IsValidParameterSetForSymSquare( type, dim, q ) then 
+        error( "not valid paramenters for symmetric square recognition" );
+    end if;
+
+    return RecogniseSymSquareFunc( G : type := type, CheckResult := CheckResult );
 end intrinsic;

@@ -7,3 +7,4 @@ symsquare.m
 sp_aux.m
 altsquare_sp.m
 altsquare.m
+recogsmalldim.m

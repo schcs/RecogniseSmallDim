@@ -5,7 +5,7 @@ import "auxfunctions.m": MyDerivedGroupMonteCarlo, IsSimilarModMinus1List,
   IsSimilarModScalar, SplitTensor, RandomInvolution, InvolutionWithProperty,
   IsSimilarToScalarMultiple;
 
-import "altsquare_sp.m": RecogniseAltSquareWithTensorDecompositionSp;
+import "altsquare_sp.m": RecogniseAltSquareSpFunc;
 
 // 2-dimensional recognition
 
@@ -162,7 +162,6 @@ RecogniseAltSquareWithTensorDecomposition := function( G :
             gensCD := []; 
             repeatflag := true;
         end if; 
-        print [ Dimension( x ) : x in mins ];
     until  not repeatflag and #mins eq 3 and &+[ Dimension( x ) : x in mins ] eq dimg;
       
     vprint SymSquareVerbose: "#   Cent comput dim", dim, "took ", 
@@ -504,7 +503,6 @@ RecogniseAltSquareWithRecursion := function( G : type := "SL",
           
         flag_dim8 := dimg ne 8 or { Dimension( x ) : x in mins } in 
                        {{12,6},{6,16}};     
-        print [ Dimension( x ) : x in mins ];
     until  #mins eq 3 and &+[ Dimension( x ) : x in mins ] eq dimg 
           and flag_dim8;
 
@@ -780,7 +778,7 @@ forward RecogniseAltSquare;
 intrinsic RecogniseAltSquare( G::GrpMat : 
             type := "SL", 
             CheckResult := true,
-            UseTensorDecomposition := true ) 
+            Method := "Recursion" ) 
           -> BoolElt, Map, Map, GrpMatElt
                                                          
  {G should be matrix group conjugate to the alternating square representation
@@ -796,16 +794,23 @@ intrinsic RecogniseAltSquare( G::GrpMat :
   For SL(d,q) with d=5,6,8 the tensor decomposition version is used while for
   SL(d,q) with d=7 or d>8 the recursive version is called as default. 
   This choice can be overwritten by setting UseTensorDecomposition to be true.}                                                
-  dim := Dimension( G );                         
+  dimg := Dimension( G );
+  dim := SolveAltSquareDimEq( dimg : type := type );                         
   p := Characteristic( CoefficientRing( G ));
   
-  error if p eq 2, "the field cannot have characteristic 2";
-  error if type eq "SL" and dim lt 21, "SL needs to have dimension at least 7";
-  error if type eq "Sp" and dim lt 27, "Sp needs to have dimension at least 8";
-  error if type eq "SU" and dim lt 21, "SU needs to have dimension at least 7"; 
-  error if type eq "Omega+" and dim lt 66, "Omega+ needs to have dimension at least 12"; 
-  error if type eq "Omega-" and dim lt 66, "Omega- needs to have dimension at least 12"; 
-  error if type eq "Omega" and dim lt 55, "Omega needs to have dimension at least 11";
+  error if p eq 2, 
+        "the field cannot have characteristic 2";
+  //error if dim lt 3, 
+  //      "the dimension must be at least 3";
+  error if type eq "Sp" and dim lt 8, 
+        "Sp needs to have dimension at least 8";
+  error if type eq "Omega+" and dim lt 10, 
+        "Omega+ must have dimension at least 10";
+  error if type eq "Omega-" and dim lt 10,
+        "Omega- must have dimension at least 10";
+  error if type eq "Omega" and dim lt 9, 
+        "Omega must have dimension at least 9";
+
       
   if type eq "Sp" then
       return RecogniseAltSquareSpFunc( G : 
@@ -815,16 +820,24 @@ intrinsic RecogniseAltSquare( G::GrpMat :
                                                                        
   // in small dimension, call other functions
   case dim: 
-      when 1: return RecogniseAltSquareDim2( G );
+      when 2: return RecogniseAltSquareDim2( G );
       when 3: return RecogniseAltSquareDim3( G : CheckResult := CheckResult );
-      when 6: return RecogniseAltSquareDim4( G : CheckResult := CheckResult );
+      when 4: return RecogniseAltSquareDim4( G : CheckResult := CheckResult );
   end case;
   
   // in dimensions 5, 6 and 8 we enforce UseTensorDecomposition
-    
-  UseTensorDecomposition := UseTensorDecomposition or dim in { 10, 15, 28 };
-  
-  if UseTensorDecomposition then
+      
+  if dim le 6 then 
+    Method := "Tensor";
+  elif type eq "Omega+" and dim lt 20 then 
+    Method := "Tensor";
+  elif type eq "Omega-" and dim lt 20 then 
+    Method := "Tensor";
+  elif type eq "Omega" and dim lt 20 then 
+    Method := "Tensor";
+  end if;
+
+  if Method eq "Tensor" then
       return RecogniseAltSquareWithTensorDecomposition( G : 
                      CheckResult := CheckResult, type := type );
   else

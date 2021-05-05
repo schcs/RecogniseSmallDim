@@ -1,10 +1,16 @@
 Sp/SU with various dimensions "Classical forms must be irreducible" error message
         probable cause: not enough generator?
 
+Sp( 12, 3) sym square: infinite loop in involution selection?
+
+Omega+(d,q) sym square: sometimes fails at the end, no square root, or root not
+        element of the field.
+
 Omega-, 10, 3: does not  find suitable involution
         probable cause: dimension too small, the only possible decomposition would be 
         10=6+4, but dimension 6 is modular.
 
+AltSquare Omega* does not work with recursion
 
 AltSquare( SU, 20, 5 ) IsTensor( aT ) fails
 

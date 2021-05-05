@@ -33,8 +33,6 @@ RecogniseSymSquareOmegaFunc := function( G :
     // see if char divides dimension; 
     pdivdim := dim mod p eq 0;    
 
-    if dim lt 21 then Method := "Tensor"; end if;
-
     vprint SymSquareVerbose: "# Recog SymSquare dim", dim;
     
     /* find an involution with sufficiently large minus one eigenspace and 
@@ -248,7 +246,10 @@ RecogniseSymSquareOmegaFunc := function( G :
    
    CD:= sub< Universe( gensCD ) | gensCD >;
 
-   if dH lt 9 or dK lt 9 or <dK,p> eq <9,5>  then Method := "Tensor"; end if;
+   if dH lt 9 or dK lt 9 or <dK,p> eq <9,5> or <dH,p> eq <10,3> 
+        or <dK,p> eq <10,3> then 
+        Method := "Tensor"; 
+   end if;
 
    if Method eq "Recursion" then 
         // ************* RECURSIVE CODE STARTS HERE ****************
