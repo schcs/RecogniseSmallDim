@@ -15,7 +15,7 @@ import "sp_aux.m": BuildBasis, TestBasis, SpTransformMatrix;
 forward RecogniseAltSquareSpFunc;
 
 RecogniseAltSquareSpFunc := function( G : CheckResult := true, 
-                                            Method := "Recursion" )
+                                            Method := "Recursive" )
                                                
     cputm := Cputime(); 
     
@@ -171,7 +171,7 @@ RecogniseAltSquareSpFunc := function( G : CheckResult := true,
 
     if dH lt 8 or dK lt 8 then Method := "Tensor"; end if;
     
-    if Method eq "Recursion" then
+    if Method eq "Recursive" then
         
         /* For some technical reason (see (###) later), the projection of a 
        generator of C cannot be similar to its negative and we want that
@@ -198,8 +198,8 @@ RecogniseAltSquareSpFunc := function( G : CheckResult := true,
         aH := sub< GL( dimH, q ) | [ x@ah : x in gensCD ]>;
         aK := sub< GL( dimK, q ) | [ x@ak : x in gensCD ]>;
 
-        vh, b1, c1, bas1 := RecogniseAltSquareSpFunc( aH );
-        vk, b2, c2, bas2 := RecogniseAltSquareSpFunc( aK );
+        vh, b1, c1, bas1 := RecogniseAltSquareSpFunc( aH : CheckResult := false );
+        vk, b2, c2, bas2 := RecogniseAltSquareSpFunc( aK : CheckResult := false );
 
         basH := [ M!(&+[bas1[j][i]*Basis( mH )[i] : 
                     i in [1..dimH]]) : j in [1..dimH]];
