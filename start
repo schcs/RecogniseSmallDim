@@ -17,7 +17,8 @@ import "altsquare.m":RecogniseAltSquareDim5;
 import "altsquare_sp.m":RecogniseAltSquareWithTensorDecompositionSp;
 
 import "auxfunctions.m":SplitTensor, IsSimilarModScalar;
-import "smalldimreps.m":funcposinv_symsquare, __funcSLdqToSymSquare;
+import "smalldimreps.m":funcposinv_symsquare, __funcSLdqToSymSquare,
+        funcposinv_altsquare;
 import "symsquare_omega.m":RecogniseSymSquareWithTensorDecompositionOmegaFunc;
 
 SetDebugOnError( true );

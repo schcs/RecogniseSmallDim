@@ -46,6 +46,7 @@ RecogniseSymSquareOmegaFunc := function( G :
 
     eiglim2 := Floor((1/4)*dim^2); // upper limit for eigenspace dim
     // normally use 10 generators for 
+
     NrGensCentInv := 10; 
     
     /* completion checking function required for the calculation of the 
@@ -272,7 +273,6 @@ RecogniseSymSquareOmegaFunc := function( G :
             typek := "Omega+";
         end if;
 
-
         // if H is Omega- and K is Omega+ then swap
         if typeh eq "Omega-" and typek eq "Omega+" then 
             t := dH; dH := dK; dK := t;
@@ -290,8 +290,44 @@ RecogniseSymSquareOmegaFunc := function( G :
     
         vh, b1, c1, bas1 := RecogniseSymSquareOmegaFunc( aH : type := typeh );
         vk, b2, c2, bas2 := RecogniseSymSquareOmegaFunc( aK : type := typek );
-
+        
         assert vh and vk;
+
+        if typeh eq "Omega-" and typek eq "Omega" then
+            
+            formcircle := ZeroMatrix( GF( q ), dK );
+            issq1 := IsSquare( GF(q)!(-1)^(dim div 2)*(1/2));
+            issq2 := IsSquare( GF(q)!(-1)^(dK div 2)*(1/2)*
+                    Determinant( ClassicalForms( OmegaMinus( dH, q ))`bilinearForm));
+
+            if issq1 eq issq2 then
+                ww := 1/2;
+            else 
+                ww := 1/2*PrimitiveElement( GF( q ));
+            end if;
+
+            for i in [1..dK div 2] do 
+                formcircle[i,dK-i+1] := 1; formcircle[dK-i+1,i] := 1;
+            end for;
+            
+            formcircle[dK div 2+1, dK div 2+1] := ww;
+            Tk := TransformForm( formcircle, "orthogonalcircle" );
+
+            g12 := Omega( dK, q );
+            gw := g12^(Tk^-1);
+            m12 := GModule( sub< GL( dimK, q ) | [ __funcSLdqToSymSquare( x : type := "Omega", ww := 1/2 ) : 
+                                x in GeneratorsSequence( g12 )] >); 
+            mw := GModule( sub< GL( dimK, q ) | [ __funcSLdqToSymSquare( x : type := "Omega", ww := ww ) : 
+                                x in GeneratorsSequence( gw )] >);     
+            v, tr := IsIsomorphic( m12, mw ); 
+            assert v;       
+            bas2 := tr^-1*bas2;
+
+        else 
+            Tk := IdentityMatrix( GF( q ), dK );
+            ww := 1/2;
+        end if;
+
         // bas1 is [e11, e12,...,e1k,...,ekk]
         // bas2 is [e{k+1}{k+1},...,edd]
 
@@ -299,13 +335,16 @@ RecogniseSymSquareOmegaFunc := function( G :
                     i in [1..dimH]]) : j in [1..dimH]];
         basK := [ M!(&+[bas2[j][i]*Basis( mK )[i] : 
                     i in [1..dimK]]) : j in [1..dimK]];
-                
+
+
+        //if dim eq 19 then return aK, bas2, Tk; end if; // *****
+
         /* Construct the image of C in the tensor product component. It must be 
         isomorphic to the tensor product of the preimages of the 
         groups induced on the sym square components */
         
         genst := [ x@at : x in gensCD ];
-        genstt := [ TensorProduct( x@ah@c1, x@ak@c2 ) : x in gensCD ];
+        genstt := [ TensorProduct( x@ah@c1, Tk*x@ak@c2*Tk^-1 ) : x in gensCD ];
         
         T := GModule( sub< GL( dimT, q ) | genst >);
         
@@ -317,7 +356,6 @@ RecogniseSymSquareOmegaFunc := function( G :
 
         listch := [ x : x in [1..#genst] | MinimalPolynomial( genst[x] ) ne
                     MinimalPolynomial( genstt[x]  )];
-
         mns := GL( dimT, q )!ScalarMatrix( GF( q ), dimT, -1 ); // scalar matrix -I 
         for i in listch do
             genstt[i] := mns*genstt[i];
@@ -540,7 +578,7 @@ RecogniseSymSquareOmegaFunc := function( G :
     end if;
 
     if not assigned ww then ww := 1/2; end if;
-    //if dH eq 12 and dK eq 9 then error(11111); end if;
+
     AssignBasisFromComponents( ~G, dH, dK, GF( q ) : type := type, 
                                                     typeh := typeh, 
                                                     typek := typek,
@@ -559,19 +597,21 @@ RecogniseSymSquareOmegaFunc := function( G :
     /* we place the basis vectors computed in bas1 and bas2 into their place
        in the basis of V */
     //bas1 := BuildBasisOmega( basH, basK, basT : wH := basOneDim[1] );
+
     bas := BuildBasisOmega( G, basH, basK, basT : type := type, 
                                                typeh := typeh, 
                                                typek := typek,
                                                wH := basOneDim[1], 
                                                ww := ww );
     tr := GL( dimg, q )!bas;
+
     g := sub< GL( dimg, q ) | { bas*x*bas^-1 : x in Generators( G0 )}>;
     form := ClassicalForms( g )`bilinearForm;
  
     posT := funcpos_symsquare( dim, dim-dH div 2, dim : type := type );
     if pdivdim then posT := posT-1; end if;
  
-    if not IsSquare( 2*form[dH div 2+1,posT] ) then
+    if not IsSquare( 2*form[dH div 2+1,posT] ) then 
         if typeh eq "Omega+" then 
             for i in [1..#basH] do 
                 pos := funcposinv_symsquare( dH, i : type := typeh );
@@ -698,7 +738,6 @@ RecogniseSymSquareOmegaFunc := function( G :
             v^2*(x-1)^2*(((dK-1) div 2)/2+1/4);
         
         elif type eq "Omega" and typeh eq "Omega-" then
-                
             auxmat, vals := OmegaBasisFromComponents( G );
             aa := vals[1]; awH := vals[2]; awK := vals[3]; 
             wHwH := vals[4]; wKwK := vals[5];
@@ -730,6 +769,7 @@ RecogniseSymSquareOmegaFunc := function( G :
                                 typeh := typeh,
                                 typek := typek, 
                                 ww := ww );  
+   //return form;
    assert v;     
    
    bas := BuildBasisOmega( G, basH, basK, basT : type := type, 

@@ -96,7 +96,7 @@ end function;
     
 TestSymSquare := function(type, d, q : NrTries := 100 )
     
-    if d ge 20 then NrTries := 20; end if;
+    if d ge 20 and NrTries gt 20 then NrTries := 20; end if;
     
     type0 := case< type | "GL": "SL", "GU": "SU", "SO+": "Omega+", 
                          "GO+": "Omega+", "SO-": "Omega-", "GO-": "Omega-", 
@@ -228,3 +228,15 @@ VectorSymSquare := function( dim, vec : type := "SL" )
     return res;
 end function;
 
+VectorAltSquare := function( dim, vec : type := "SL" )
+
+    res := [];
+    d := #Eltseq( vec );
+    for i in [1..d] do 
+        if vec[i] ne 0 then
+            Append( ~res, <vec[i],funcposinv_altsquare( dim, i : type := type )>);
+        end if;
+    end for;
+
+    return res;
+end function;

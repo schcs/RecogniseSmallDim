@@ -375,7 +375,7 @@ BasisMatrixForSymSquareOmega := function( type, d, F : ww := 1/2 )
             "Omega-": BasisMatrixForSymSquareOmegaMinus( d, F ),
             "Omega": BasisMatrixForSymSquareOmegaCircle( d, F : ww := ww ),
             default: false >;
-end function;
+end function;    
 
 // the image of a matrix in SL( d, q ) in the sym square module.
   

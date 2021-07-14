@@ -271,8 +271,13 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
         de := Dimension( Eigenspace( inv, -1 ));
     until de ge eiglim1 and de le eiglim2;
     vprint SymSquareVerbose: "#   Inv found dim", dim, "in ", Cputime()-cputm;
-          
-    NrGensCentInv := 10; 
+
+    if <type,dim,q> eq <"SU",9,9> then 
+        NrGensCentInv := 20;          
+    else    
+        NrGensCentInv := 10; 
+    end if;
+
     __compcheck := func< G, C, g | NumberOfGenerators( C ) ge NrGensCentInv >;
     
     /* Next we find the generating set of the centralizer of the involution.
@@ -280,12 +285,26 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
        components. */
 
     gensC := []; gensCD := [];
+
+    if <type,dim,q> eq <"Sp",6,3> then 
+        take_derived_subgroup := false;
+    else
+        take_derived_subgroup := true;
+    end if;
  
+    count := 0;
     repeat            
+        count := count + 1; if count eq 1000 then error( 111 ); end if;
         C := CentraliserOfInvolution( G, inv : 
-                     CompletionCheck := __compcheck );  
-        CD := MyDerivedGroupMonteCarlo( C : 
-                      NumberGenerators := NrGensCentInv );
+                         CompletionCheck := __compcheck );
+        
+        if take_derived_subgroup then 
+            CD := MyDerivedGroupMonteCarlo( C : 
+                          NumberGenerators := NrGensCentInv );
+        else 
+            CD := C;
+        end if;
+
         gensC := gensC cat GeneratorsSequence( C );
         gensCD := gensCD cat GeneratorsSequence( CD );
         C := sub< Universe( gensC ) | gensC >;
@@ -348,14 +367,27 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
        end if;
     end for;
    
-    CD:= sub< Universe( gensCD ) | gensCD >;
+    mins := MinimalSubmodules( GModule( sub< Universe( gensCD ) | gensCD > ) : 
+                                Limit := 4 ); 
+
+    while #mins ne 3 or &+[ Dimension( x ) : x in mins ] ne dimg do
+
+        print "jjjjjjjjjjjjj";
+        repeat
+            x := Random( CD ); xa := x@at;
+        until MinimalPolynomial( xa ) ne MinimalPolynomial( mns*xa );
+        Append( ~gensCD, x );        
+        mins := MinimalSubmodules( GModule( sub< Universe( gensCD ) | gensCD > ) : 
+                                    Limit := 4 ); 
+    end while;
     
     /* construct and recognise the two groups induced on the sym square
        components */
-    
+
     aH := sub< GL( dimH, q ) | [ x@ah : x in gensCD ]>;
     aK := sub< GL( dimK, q ) | [ x@ak : x in gensCD ]>;
 
+    //error(111);
     assert IsIrreducible( aH ) and IsIrreducible( aK );
      
     // the recursive call to recognise the smaller-dimensional sym squares aH and aK
