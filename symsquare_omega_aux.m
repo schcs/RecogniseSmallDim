@@ -439,7 +439,7 @@ TestBasisOmega := function( G, basH, basK, basT, wH, wK, g : type := "Omega+",
 
     F := CoefficientRing( g );    
     scalars := [ <a,b,c,d > : a in [1,-1], b in [1,-1], c in [1,-1],
-                 d in [ 1,-1 ]]; 
+                 d in [1,-1]]; 
     results := [];
     maxzero := 0;
     for s in scalars do 
