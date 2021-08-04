@@ -151,7 +151,7 @@ end function;
 
 
 TestAltSquare := function( type, d, q : NrTries := 100,
-			   Method := "Recursion" )
+                                        Method := "Recursive" )
     
     if d ge 20 then NrTries := 20; end if;
 
@@ -172,7 +172,7 @@ TestAltSquare := function( type, d, q : NrTries := 100,
 end function;
     
 TestAltSquare2 := function( type, limd, limq, nr : 
-                  Method := "Recursion" )
+                  Method := "Recursive" )
     
     vb := GetVerbose( "SymSquareVerbose" );
     SetVerbose( "SymSquareVerbose", 0 );

@@ -246,6 +246,8 @@ RecogniseSymSquareOmegaFunc := function( G :
             typek := "Omega-";
         elif type eq "Omega-" and typeh eq "Omega-" then 
             typek := "Omega+";
+        elif type eq "Omega" then 
+            typek := "Omega";
         end if;
 
         // if H is Omega- and K is Omega+ then swap

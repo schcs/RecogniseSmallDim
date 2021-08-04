@@ -169,7 +169,14 @@ RecogniseAltSquareSpFunc := function( G : CheckResult := true,
     at := pmap< GL( dimg, q ) -> GL( dimT, q ) | 
           x :-> GL( dimT, q )![ Eltseq( mT!((M!b)^x )) : b in Basis( mT )]>;
 
-    if dH lt 8 or dK lt 8 then Method := "Tensor"; end if;
+    /* some cases the Recursion method does not work and we need to use the 
+       tensor decomposition */
+
+    if dH lt 8 or dK lt 8 then 
+        Method := "Tensor"; 
+    elif p eq 3 and ( dH eq 10 or dK eq 10 ) then 
+        Method := "Tensor";
+    end if;
     
     if Method eq "Recursive" then
         

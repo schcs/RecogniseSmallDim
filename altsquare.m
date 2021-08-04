@@ -25,9 +25,15 @@ IsValidParameterSetForAltSquare := function( type, dim, q )
         return false;
     elif type eq "Omega+" and dim lt 10 then
         return false;
+    elif type eq "Omega+" and p eq 5 then 
+        return false;
     elif type eq "Omega-" and dim lt 12 then 
         return false;
     elif type eq "Omega" and dim lt 9 then 
+        return false;
+    elif type eq "Omega" and dim eq 9 and q eq 3 then 
+        return false;
+    elif type eq "Omega*" and dim lt 12 then 
         return false;
     end if;
 
@@ -219,13 +225,6 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
     dT := dH*dK;
     assert Dimension( mT ) eq dT;
 
-    vprint SymSquareVerbose: "# component dimensions are: ", dH, " and ", dK;
-    
-    if not IsValidParameterSetForAltSquare( type, dH, q ) or 
-       not IsValidParameterSetForAltSquare( type, dK, q ) then 
-        Method := "Tensor";
-    end if;
-
     // set up the projections into the components
     
     ah := pmap< GL( dimg, q ) -> GL( dimH, q ) | 
@@ -236,7 +235,21 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
     
     at := pmap< GL( dimg, q ) -> GL( dimT, q ) | 
           x :-> GL( dimT, q )![ Eltseq( mT!((M!b)^x )) : b in Basis( mT )]>;
-    
+
+    if type in { "Omega", "Omega+", "Omega-" } then
+        typeh := "Omega*"; typek := "Omega*";
+    else
+        typeh := type; typek := type;
+    end if;
+
+    vprint SymSquareVerbose: "# components are: ", typeh, dH, " and ", typek, dK;
+
+    if not IsValidParameterSetForAltSquare( typeh, dH, q ) or 
+       not IsValidParameterSetForAltSquare( typek, dK, q ) then 
+        Method := "Tensor";
+    end if;
+
+
     /* For some technical reason (see (###) later), the projection of a 
        generator of C cannot be similar to its negative and we want that
        the projection by ah and ak should fall into SL.     
@@ -252,13 +265,15 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
         if Determinant( gensCD[i]@ah ) ne 1 or 
               Determinant( gensCD[i]@ak ) ne 1 or 
               IsSimilarToScalarMultiple( gensCD[i]@ah ) or
-              IsSimilarToScalarMultiple( gensCD[i]@ak ) then
+              IsSimilarToScalarMultiple( gensCD[i]@ak ) or 
+              IsSimilarToScalarMultiple( gensCD[i]@at ) then
            repeat
                x := Random( CD );
            until Determinant( x@ah ) eq 1 and
                 Determinant( x@ak ) eq 1 and not 
                 IsSimilarToScalarMultiple( x@ah ) and not
-                IsSimilarToScalarMultiple( x@ak );
+                IsSimilarToScalarMultiple( x@ak ) and not 
+                IsSimilarToScalarMultiple( x@at );
            gensCD[i] := x;
        end if;
    end for; 
@@ -371,9 +386,9 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
                       DerivedLength := case< dK | 4: 2, default: 1 >); 
 
         v1, b1, c1, bas1 := RecogniseAltSquare( aH : CheckResult := false, 
-                            type := type );
+                            type := typeh );
         v2, b2, c2, bas2 := RecogniseAltSquare( aK : CheckResult := false, 
-                            type := type );
+                            type := typek );
         assert v1 and v2;
     
         // bas1 is [e12,e13,...,e23,...,e{k-1}{k}]
@@ -394,22 +409,65 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
            aH tensor (aK)^-t or (aH)^-t tensor (aK)^-t where ^-t is the inverse
            transpose isomorphism. We need to discover which one it is and 
            modify bas1 and bas2 accordingly. */
+
+        
       
-        foundflag := false;   // flag to show if the right case is found
+        //foundflag := false;   // flag to show if the right case is found
     
         v, signs := IsSimilarModMinus1List( genst, genstt );
-        if v then
-            vprint SymSquareVerbose: "# No tensor is involved in dim ", dim;
+        
+        if not v then 
+            for cc in [1..3] do
+                //print "cc", cc;
+                if cc eq 2 then 
+                    genstt := [ TensorProduct( Transpose( x@ah@c1 )^-1, x@ak@c2 ) : 
+                            x in gensCD ];
+                    v, signs := IsSimilarModMinus1List( genst, genstt );
+                    if v then 
+                        vprint SymSquareVerbose: "# TransInv in first comp";
+                        basH := [ basH[6], -basH[5], basH[4], 
+                                  basH[3], -basH[2], basH[1]];        
+                        break;
+                    end if;
+                elif cc eq 3 then 
+                    genstt := [ TensorProduct( x@ah@c1, Transpose( x@ak@c2 )^-1) : 
+                            x in gensCD ];
+                    v, signs := IsSimilarModMinus1List( genst, genstt );
+                    if v then 
+                        vprint SymSquareVerbose: "# TransInv in second comp";
+                        basK := [ basK[6], -basK[5], basK[4], 
+                                  basK[3], -basK[2], basK[1]];        
+                        break;
+                    end if;
+                elif cc eq 1 then 
+                    genstt := [ TensorProduct( Transpose( x@ah@c1 )^-1, 
+                                  Transpose( x@ak@c2 )^-1 ) : x in gensCD ];
+                    v, signs := IsSimilarModMinus1List( genst, genstt );
+                    if v then 
+                        vprint SymSquareVerbose: "# TransInv in both comps";
+                        basH := [ basH[6], -basH[5], basH[4], 
+                                  basH[3], -basH[2], basH[1]];
+                        basK := [ basK[6], -basK[5], basK[4], 
+                                  basK[3], -basK[2], basK[1]];
+                        break;
+                    end if;
+                end if;
+            end for;
+        end if;
+    
+        assert v;
+     /*   if v then
+            vprint SymSquareVerbose: "# No invtranspose is involved in dim ", dim;
             foundflag := true;
         elif not foundflag and not v then
             genstt := [ TensorProduct( Transpose( x@ah@c1 )^-1, x@ak@c2 ) : 
                         x in gensCD ];
-        v, signs := IsSimilarModMinus1List( genst, genstt );
+            v, signs := IsSimilarModMinus1List( genst, genstt );
         end if;
     
         if not foundflag and v then
-            vprint SymSquareVerbose: "# Tensor is involved in first comp in dim ", 
-            dim;
+            vprint SymSquareVerbose: "# Invtrans is involved in first comp in dim ", 
+                    dim;
             basH := [ basH[6], -basH[5], basH[4], basH[3], -basH[2], basH[1]];
             foundflag := true;
         elif not foundflag and not v then
@@ -419,7 +477,7 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
         end if;
     
         if not foundflag and v then
-             vprint SymSquareVerbose: "# Tensor is involved in second comp in dim ", 
+             vprint SymSquareVerbose: "# Invtrans is involved in second comp in dim ", 
                         dim;
              basK := [ basK[6], -basK[5], basK[4], basK[3], -basK[2], basK[1]];
              foundflag := true;
@@ -427,17 +485,19 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
             genstt := [ TensorProduct( Transpose( x@ah@c1 )^-1, 
                               Transpose( x@ak@c2 )^-1 ) : x in gensCD ];
             v, signs := IsSimilarModMinus1List( genst, genstt );
-        end if;
+            if v then 
+            
+
     
         if not foundflag and v then
-            vprint SymSquareVerbose: "# Tensor is involved in both comp in dim ", 
+            vprint SymSquareVerbose: "# Invtrans is involved in both comp in dim ", 
                     dim;
             basH := [ basH[6], -basH[5], basH[4], basH[3], -basH[2], basH[1]];
             basK := [ basK[6], -basK[5], basK[4], basK[3], -basK[2], basK[1]];
             foundflag := true;
         end if;
 
-        assert foundflag;
+        assert foundflag; */
         
         genstt := [ signs[i]*genstt[i] : i in [1..#genstt]];        
         T := GModule( sub< GL( dimT, q ) | genst >);

@@ -21,11 +21,15 @@ end function;
                                
 MyDerivedGroupMonteCarlo := function( G : NumberGenerators := 20,
 				          DerivedLength := 1 );
-    
-gens := { case< DerivedLength |
-	  2: ((Random(G),Random(G)),(Random(G),Random(G))),
-          default: (Random(G),Random(G))> : 
-	  x in [1..NumberGenerators] };
+
+    if DerivedLength eq 0 then 
+        return G;
+    end if; 
+
+    gens := { case< DerivedLength |
+	                2: ((Random(G),Random(G)),(Random(G),Random(G))),
+                    default: (Random(G),Random(G))> : 
+            x in [1..NumberGenerators] };
 
     return sub< Universe( gens ) | gens >;
 end function;

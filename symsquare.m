@@ -25,7 +25,7 @@ AddAttribute( GrpMat, "BasisMatrixFromComponents" );
 /* The recognition procedure for SX( 2, q ). It is based on the fact that 
    SymSquare( SL( 2, q )) is 3-dimensional and preserves a quadratic form. */
     
-RecogniseSymSquareDim2 := function( G )
+RecogniseSymSquareDim2 := function( G : CheckResult := true )
     
     vprint SymSquareVerbose: "# Recog SymSquare dim 2";
     cputm := Cputime();
@@ -50,12 +50,25 @@ RecogniseSymSquareDim2 := function( G )
     
     vprint SymSquareVerbose: "# Recog SymSquare dim 2 took", Cputime()-cputm;
     
+    // if CheckResult is set, we perform a check
+    if CheckResult then
+        vprint SymSquareVerbose: "# Checking final result";
+        gens := [ x@b : x in GeneratorsSequence( G )];
+        M1 := GModule( sub< GL( 3, q ) | 
+                      [ SymmetricSquare( MatrixAlgebra( GF( q ), 2 )!x ) 
+                        : x in gens ]>);
+        if not IsIsomorphic( M1, GModule( G )) then
+	        return false, _, _, _;
+        end if;
+        vprint SymSquareVerbose: "# Check passed.";
+    end if;
+
     return true, a, b, mat^-1;
 end function;    
     
 // The recognition procedure for SX(3,q)    
     
-RecogniseSymSquareDim3 := function( G : type := "SL" )
+RecogniseSymSquareDim3 := function( G : type := "SL", CheckResult := true )
     
     vprint SymSquareVerbose: "# Recog SymSquare dim 3";
     cputm := Cputime();
@@ -207,7 +220,20 @@ RecogniseSymSquareDim3 := function( G : type := "SL" )
     b := pmap< GL( 6, q ) -> GL( 3, q ) |
          x :-> GL( 3, q )!__funcSymSquareToSLdq( x^(tr^-1)) >;
     vprint SymSquareVerbose: "# Recog SymSquare dim 3 took ", Cputime()-cputm;
-    
+
+    // if CheckResult is set, we perform a check
+    if CheckResult then
+        vprint SymSquareVerbose: "# Checking final result";
+        gens := [ x@b : x in GeneratorsSequence( G )];
+        M1 := GModule( sub< GL( 6, q ) | 
+                      [ SymmetricSquare( MatrixAlgebra( GF( q ), 3 )!x ) 
+                        : x in gens ]>);
+        if not IsIsomorphic( M1, GModule( G )) then
+	        return false, _, _, _;
+        end if;
+        vprint SymSquareVerbose: "# Check passed.";
+    end if;
+
     return true, a, b, tr;
 end function;
 
@@ -272,7 +298,7 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
     until de ge eiglim1 and de le eiglim2;
     vprint SymSquareVerbose: "#   Inv found dim", dim, "in ", Cputime()-cputm;
 
-    if <type,dim,q> eq <"SU",9,9> then 
+    if type eq "SU" and dim le 10 and q le 25 then 
         NrGensCentInv := 20;          
     else    
         NrGensCentInv := 10; 
@@ -286,21 +312,33 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
 
     gensC := []; gensCD := [];
 
-    if <type,dim,q> eq <"Sp",6,3> then 
+    if <dim,q> eq <6,3> then 
         take_derived_subgroup := false;
     else
         take_derived_subgroup := true;
     end if;
- 
+
+    if type ne "SU" and ( q ge 5 or dim ge 6 ) then 
+        DerivedLength := 2; 
+    elif type eq "SU" and dim gt 4 then 
+        DerivedLength := 1;
+    elif type eq "SU" and dim le 4 then 
+        DerivedLength := 1;
+    else
+        DerivedLength := 1; 
+    end if;
+    
     count := 0;
     repeat            
-        count := count + 1; if count eq 1000 then error( 111 ); end if;
+        count := count + 1; 
+        if count gt 100 then error( 111 ); end if;
         C := CentraliserOfInvolution( G, inv : 
                          CompletionCheck := __compcheck );
         
         if take_derived_subgroup then 
             CD := MyDerivedGroupMonteCarlo( C : 
-                          NumberGenerators := NrGensCentInv );
+                          NumberGenerators := NrGensCentInv,
+                          DerivedLength := DerivedLength );
         else 
             CD := C;
         end if;
@@ -391,8 +429,10 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
     assert IsIrreducible( aH ) and IsIrreducible( aK );
      
     // the recursive call to recognise the smaller-dimensional sym squares aH and aK
-    _, b1, c1, bas1 := RecogniseSymSquareFunc( aH : type := type );
-    _, b2, c2, bas2 := RecogniseSymSquareFunc( aK : type := type );
+    _, b1, c1, bas1 := RecogniseSymSquareFunc( aH : 
+                            type := type );
+    _, b2, c2, bas2 := RecogniseSymSquareFunc( aK : 
+                            type := type );
     
     // bas1 is [e11, e12,...,e1k,...,ekk]
     // bas2 is [e{k+1}{k+1},...,edd]
@@ -443,7 +483,18 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
     bas := BuildBasisOmega( G, bas1, bas2, tbas : type := type, 
                 typeh := type, typek := type );
     tr := GL( dimg, q )!bas; //[ Eltseq( x ) : x in bas ];
-        
+
+    try
+        ttt := __funcSymSquareToSLdq( tr*CD.1*tr^-1 );
+    catch e
+        error( "ttt failed" );
+    end try; 
+
+    if Category( ttt ) eq BoolElt then 
+        error( "ttt failed" );
+    end if;
+
+
     /* Finally we have a complete basis. However, the vectors 
        eij that were returned by the tensor recognition  
        are only determined up to a scalar c, while the vectors eij 
@@ -461,6 +512,8 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
     repeat 
         test := Random( G )^(tr^-1);
     until test[1,1] ne 0 and test[1,pos] ne 0;
+
+    assert test[1,dH div 2+1] ne 0 and test[1,dH div 2+2] ne 0;
     
     lambdasq := test[1,dH div 2+1]*test[1,dH div 2+2]*(2*test[1,1]*test[1,pos])^-1;
 
@@ -498,7 +551,7 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
     end try;
 
     tr := GL( dimg, q )!bas;//[ Eltseq( x ) : x in bas ];
-    
+
     // construct the maps between GL(dim,q) and G
     
     a := map< GL( dim, q ) -> GL( dimg, q ) | 
@@ -506,14 +559,19 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
     
     b := pmap< GL( dimg, q ) -> GL( dim, q ) |
          x :-> GL( dim, q )!__funcSymSquareToSLdq( x^(tr^-1)) >;
-    
+
+
     vprint SymSquareVerbose: "# Recog SymSquare dim", dim, "took ", 
       Cputime()-cputm;
     
     // if CheckResult is set, we perform a check
     if CheckResult then
         vprint SymSquareVerbose: "# Checking final result";
-        gens := [ x@b : x in GeneratorsSequence( G )];
+        try
+            gens := [ x@b : x in GeneratorsSequence( G )];
+        catch e 
+            error( "Failed to apply map from G to classical group" );
+        end try;
         M1 := GModule( sub< GL( dimg, q ) | 
                       [ SymmetricSquare( MatrixAlgebra( GF( q ), dim )!x ) 
                         : x in gens ]>);
@@ -546,3 +604,4 @@ intrinsic RecogniseSymSquare( G::GrpMat : type := "SL",
 
     return RecogniseSymSquareFunc( G : type := type, CheckResult := CheckResult );
 end intrinsic;
+
