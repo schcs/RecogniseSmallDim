@@ -206,16 +206,8 @@ forward __funcSLdqToSymSquare;
 
 GetValueOmegaMinus := function( q )
 
-    g0 := OmegaMinus( 4, q );
-    g := sub< GL( 10, q ) | __funcSLdqToSymSquare( g0.1 ), 
-                            __funcSLdqToSymSquare( g0.2 )>;
-    M := GModule( g );
-    subs := Submodules( M );
-
-    m := subs[3]; assert Dimension( m ) eq 9;
-    v := M!m.4; assert v[4] eq 1 and v[2] eq 0;
-    
-    return v[8], (M!subs[2].1)[8];
+    gamma := -Nonsquare( GF( q ));
+    return -1/gamma, 1/2*gamma^-1;
 end function;
 
 // tha basis transform matrix for sym square of Omega+

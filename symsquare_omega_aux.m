@@ -79,9 +79,11 @@ SplitClassicalSpaceIntoComponents := function( d1, d2, F, type :
     
         W := sub< V | v1, v2, v3 >;
 
-        mat := ClassicalForms( OmegaMinus( 4, q ))`bilinearForm;
+        //mat := ClassicalForms( OmegaMinus( 4, q ))`bilinearForm;
 
-        w2w2 := ClassicalForms( OmegaMinus( 4, q ))`bilinearForm[3,3];
+        //w2w2 := ClassicalForms( OmegaMinus( 4, q ))`bilinearForm[3,3];
+
+        w2w2 := -Nonsquare( GF( q ));
 
         f3 := ZeroMatrix( F, 3, 3 );
         f3[1,1] := 1;

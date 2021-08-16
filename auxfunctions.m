@@ -235,3 +235,28 @@ ConjugateClassicalStandardToSXnq := function( type, dim, q )
     
     return  GL( dim, q )!PermutationMatrix( GF( q ), Sym( dim )!list )^-1;
 end function;
+
+
+TransformToForm := function( G )
+
+    tr := TransformForm( G );
+    if FormType( G ) ne "orthogonalminus" then 
+        return tr;
+    end if;
+
+    d := Dimension( G );
+    F := CoefficientRing( G );
+
+    oldform := ZeroMatrix( F, d, d );
+    for i in [1..(d-2) div 2] do
+        oldform[i,d+1-i] := 1;
+        oldform[d+1-i,i] := 1;
+    end for;
+
+    oldform[d div 2,d div 2] := 1;
+    oldform[d div 2+1,d div 2+1] := -Nonsquare( F );
+
+    return tr*TransformForm( oldform, "orthogonalminus" )^-1;
+end function;
+    
+

@@ -5,7 +5,7 @@ import "smalldimreps.m":__funcSLdqToSymSquare, __funcSymSquareToSLdq,
 SolveSymSquareDimEq, funcpos_symsquare, funcposinv_symsquare, BasisMatrixForSymSquareOmega;
 
 import "auxfunctions.m": MyDerivedGroupMonteCarlo, IsSimilarToScalarMultiple, 
-    SplitTensor, IsSimilarModScalar;
+    SplitTensor, IsSimilarModScalar, TransformToForm;
 
 import "symsquare_omega_aux.m":TestBasisOmega, OmegaBasisFromComponents, 
     BuildBasisOmega, TypeOfSymSquareOmega, SymSquareOmegaBasisWithOmegaMinus, 
@@ -275,7 +275,8 @@ RecogniseSymSquareOmegaFunc := function( G :
             formcircle := ZeroMatrix( GF( q ), dK );
             issq1 := IsSquare( GF(q)!(-1)^(dim div 2)*(1/2));
             issq2 := IsSquare( GF(q)!(-1)^(dK div 2)*(1/2)*
-                    Determinant( ClassicalForms( OmegaMinus( dH, q ))`bilinearForm));
+                                (-1)^((dH - 2) div 2+1)*Nonsquare( GF( q )));
+                    //Determinant( ClassicalForms( OmegaMinus( dH, q ))`bilinearForm));
 
             if issq1 eq issq2 then
                 ww := 1/2;
@@ -391,7 +392,7 @@ RecogniseSymSquareOmegaFunc := function( G :
         end if;
         
         // calculate the basis for aT that reflects the tensor structure
-        
+
         tbas := pm^-1*TensorBasis( aT )^-1;
         
         // set of the maps from aT into the tensor components
@@ -467,14 +468,15 @@ RecogniseSymSquareOmegaFunc := function( G :
         we calculate the transformation matrices  and conjugate the 
         generators to the right form. */
         
-        Th := TransformForm( sub< Universe( gens1h ) | gens1h > );
-        Tk := TransformForm( sub< Universe( gens1k ) | gens1k > );
+        Th := TransformToForm( sub< Universe( gens1h ) | gens1h > );
+        Tk := TransformToForm( sub< Universe( gens1k ) | gens1k > );
 
         if typeh eq "Omega-" and typek eq "Omega" then
             formcircle := ZeroMatrix( GF( q ), dK );
             issq1 := IsSquare( GF(q)!(-1)^(dim div 2)*(1/2));
             issq2 := IsSquare( GF(q)!(-1)^(dK div 2)*(1/2)*
-                    Determinant( ClassicalForms( OmegaMinus( dH, q ))`bilinearForm));
+                        (-1)^((dH - 2) div 2+1)*Nonsquare( GF( q )));
+                    //Determinant( ClassicalForms( OmegaMinus( dH, q ))`bilinearForm));
 
             if issq1 eq issq2 then
                 ww := 1/2;
@@ -497,7 +499,7 @@ RecogniseSymSquareOmegaFunc := function( G :
         tbas := TensorProduct( Th^-1, Tk^-1 )*tbas;
         gens1h := [ x^Th : x in gens1h ];
         gens1k := [ x^Tk : x in gens1k ];
-
+        //error(111);
         gens1h := [ GL(dimH,q)!__funcSLdqToSymSquare( x : type := typeh ) : 
                     x in gens1h ];
         gens2h := [ x@ah : x in gensCD ];
@@ -553,8 +555,6 @@ RecogniseSymSquareOmegaFunc := function( G :
 
     // ********************** TENSOR DECOMP SPECIFIC CODE ENDS HERE **************
     end if;
-
-
 
     if not assigned ww then ww := 1/2; end if;
 
@@ -626,11 +626,12 @@ RecogniseSymSquareOmegaFunc := function( G :
             if q mod 4 eq 3 then 
                 m2 := Matrix( GF( q ), 2, 2, [z,0,0,z]);
             else 
-                m0 := ClassicalForms( OmegaMinus( 2, q ))`bilinearForm;
-                m2 := Matrix( GF( q ), 2, 2, [z*m0[1,1],0,0,z*m0[2,2]]);
+                m2 := Matrix( GF( q ), 2, 2, [z,0,0,-z*Nonsquare( GF( q ))]);
             end if;
-
-            t2 := TransformForm( m2, "orthogonalminus" );
+            // problem???
+            oldform := Matrix( GF( q ), 2, 2, [1,0,0,-Nonsquare( GF( q ))]);
+            t2 := TransformForm( m2, "orthogonalminus" )*
+                    TransformForm( oldform, "orthogonalminus" )^-1;
             
             trh[dH div 2,dH div 2] := t2[1,1]; trh[dH div 2,dH div 2+1] := t2[1,2];
             trh[dH div 2+1,dH div 2] := t2[2,1]; trh[dH div 2+1,dH div 2+1] := t2[2,2];
