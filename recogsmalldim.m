@@ -79,5 +79,5 @@ RecogniseSymSquareWithSmallDegree := function( G : type := "SL" )
     b := pmap< GL( d, q ) -> GL( dimg, q ) | 
          x :-> con*__funcSLdqToSymSquare( x : type := type )*con^-1 >;
 
-    return true, b, a, con;
+    return true, a, b, con;
 end function;
