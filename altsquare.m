@@ -197,7 +197,7 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
             repeatflag := true;
         end if; 
     until  not repeatflag and #mins eq 3 and &+[ Dimension( x ) : x in mins ] eq dimg;
-      
+    
     vprint SymSquareVerbose: "#   Cent comput dim", dim, "took ", 
       Cputime()-cputm, #gensC, "gens used.";
       
@@ -248,7 +248,6 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
        not IsValidParameterSetForAltSquare( typek, dK, q ) then 
         Method := "Tensor";
     end if;
-
 
     /* For some technical reason (see (###) later), the projection of a 
        generator of C cannot be similar to its negative and we want that
@@ -618,7 +617,6 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
         try
           gens := [ x@b : x in GeneratorsSequence( G )];
         catch e
-          return false, a, b, tr, CD;
           error(1);
         end try;
         M1 := GModule( sub< GL( dimg, q ) | 
@@ -633,7 +631,6 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
         
     return true, a, b, tr, CD;
 end function;
-
                 
 forward RecogniseAltSquare;
     
