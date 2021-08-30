@@ -675,6 +675,10 @@ intrinsic RecogniseAltSquare( G::GrpMat :
     return RecogniseAltSquareWithSmallDegree( G : type := type );
   elif type eq "Sp" and dim eq 10 and p eq 3 then   
     return RecogniseAltSquareWithSmallDegree( G : type := type );
+  elif type eq "Omega+" and dim eq 10 then
+    return RecogniseAltSquareWithSmallDegree( G : type := type );
+  elif type eq "Omega" and dim eq 9 and p eq 3 then
+    return RecogniseAltSquareWithSmallDegree( G : type := type );
   end if; 
 
   //error if dim lt 3, 
