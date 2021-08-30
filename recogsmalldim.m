@@ -34,14 +34,14 @@ RecogniseAltSquareWithSmallDegree := function( G : type := "SL" )
     if not v then 
         error( "Module isomorphism failed." );
     end if;
-    
-    a := map< GL( dimg, q ) -> GL( d, q ) | 
-         x :-> (GL(d,q)!__funcAltSquareToSLdq( x^con : type := type )) >;
-    
-    // construct the function G -> SL( 2, q )
-    
-    b := pmap< GL( d, q ) -> GL( dimg, q ) | 
+        
+    a := pmap< GL( d, q ) -> GL( dimg, q ) | 
          x :-> con*__funcSLdqToAltSquare( x : type := type )*con^-1 >;
+
+    // construct the function G -> SL( 2, q )
+
+    b := map< GL( dimg, q ) -> GL( d, q ) | 
+         x :-> (GL(d,q)!__funcAltSquareToSLdq( x^con : type := type )) >;
 
     return true, a, b, con;
 end function;
@@ -70,14 +70,14 @@ RecogniseSymSquareWithSmallDegree := function( G : type := "SL" )
     if not v then 
         error( "Module isomorphism failed." );
     end if;
-    
-    a := map< GL( dimg, q ) -> GL( d, q ) | 
-         x :-> (GL(d,q)!__funcSymSquareToSLdq( x^con : type := type )) >;
-    
+
     // construct the function G -> SL( 2, q )
     
-    b := pmap< GL( d, q ) -> GL( dimg, q ) | 
+    a := pmap< GL( d, q ) -> GL( dimg, q ) | 
          x :-> con*__funcSLdqToSymSquare( x : type := type )*con^-1 >;
+
+    b := map< GL( dimg, q ) -> GL( d, q ) | 
+         x :-> (GL(d,q)!__funcSymSquareToSLdq( x^con : type := type )) >;
 
     return true, a, b, con;
 end function;

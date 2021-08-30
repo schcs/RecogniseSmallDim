@@ -358,7 +358,14 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
        M2K := GModule( sub< GL( dimK, q ) | gens2k >);
     
        v, trmk := IsIsomorphic( M1K, M2K ); assert v;
-    
+ 
+       gggh := [ __funcAltSquareToSLdq( trmh*x*trmh^-1 ) : x in gens2h ];
+        
+       gggk := [ __funcAltSquareToSLdq( trmk*x*trmk^-1 ) : x in gens2k ];
+     
+
+       print ClassicalForms( sub< GL(dH,q) | gggh > )`formType;
+       print ClassicalForms( sub< GL(dK,q) | gggk > )`formType;
        // bas1 is [e12,e13,...,e23,...,e{k-1}{k}]
        // bas2 is [e{k+1}{k+2},...,e{d-1}d]
       
