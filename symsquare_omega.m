@@ -233,7 +233,7 @@ RecogniseSymSquareOmegaFunc := function( G :
         aK := sub< GL( dimK, q ) | [ x@ak : x in gensCD ]>;
         
         //get the type of the component H
-        v1, typeh := LieType( aH, q ); assert v1;
+        v1, typeh := LieType( aH, p ); assert v1;
         typeh := case< typeh[1] | "D": "Omega+", "2D": "Omega-", "B": "Omega", 
                         default: false >;
 
