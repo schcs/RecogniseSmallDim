@@ -23,10 +23,10 @@ IsValidParameterSetForAltSquare := function( type, dim, q )
         return false;
     elif type eq "SU" and dim in {5,6} then 
         return false;
-    elif type eq "Omega+" and dim lt 10 then
+    elif type eq "Omega+" and dim lt 12 then
         return false;
-    elif type eq "Omega+" and p eq 5 then 
-        return false;
+    //elif type eq "Omega+" and p eq 5 then 
+    //    return false;
     elif type eq "Omega-" and dim lt 12 then 
         return false;
     elif type eq "Omega" and dim lt 9 then 
@@ -150,8 +150,7 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
     // upper limit for eigenspace dim
     
     if type eq "Omega-" and dim eq 12 then 
-        eiglim1 := 36;
-        eiglim2 := 36;
+        eiglim1 := 36; eiglim2 := 36;
     end if;
       
     // set up property function for InvolutionWithProperty  
@@ -181,22 +180,24 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
                       DerivedLength := case< dim | 
                       8: 2, 9: 2, 10: 2, 11: 2, 12: 2, 18: 2, 
                         default : 1 >);      
+        
         gensC := gensC cat GeneratorsSequence( C );
         gensCD := gensCD cat GeneratorsSequence( CD );
         C := sub< Universe( gensC ) | gensC >;
+
         CD := sub< Universe( gensCD ) | gensCD >;
+
         M := GModule( CD );
         mins := [ x : x in MinimalSubmodules( M : Limit := 4 )]; 
-        //print [ Dimension( x ) : x in mins ];
         if #mins eq 2 or 1 in { Dimension( x ) : x in mins } or 
            ( type in { "Omega+", "Omega-", "Omega" } and #mins  ne 3 ) or 
            ( type in { "Omega+", "Omega-", "Omega" } and 1 in { Dimension( x ) : x in mins }) then 
-            delete inv; 
+            delete inv;
             gensC := [];
-            gensCD := []; 
+            gensCD := [];
             repeatflag := true;
-        end if; 
-    until  not repeatflag and #mins eq 3 and &+[ Dimension( x ) : x in mins ] eq dimg;
+        end if;
+        until  not repeatflag and #mins eq 3 and &+[ Dimension( x ) : x in mins ] eq dimg;
     
     vprint SymSquareVerbose: "#   Cent comput dim", dim, "took ", 
       Cputime()-cputm, #gensC, "gens used.";
@@ -265,7 +266,7 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
               Determinant( gensCD[i]@ak ) ne 1 or 
               IsSimilarToScalarMultiple( gensCD[i]@ah ) or
               IsSimilarToScalarMultiple( gensCD[i]@ak ) or 
-              IsSimilarToScalarMultiple( gensCD[i]@at ) then
+              IsSimilarToScalarMultiple( gensCD[i]@at ) then 
            repeat
                x := Random( CD );
            until Determinant( x@ah ) eq 1 and
@@ -289,17 +290,25 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
       
        genst := [ x@at : x in gensCD ];
        aT := sub< Universe( genst ) | genst >;
-       //if dH eq 10 then return aT; end if; 
 
-       v := IsTensor( aT ); assert v; 
-    
-       // get the dimensions of the tensor factors
-       dt1 := Dimension( TensorFactors( aT )[1] ); 
-       dt2 := Dimension( TensorFactors( aT )[2] );
-    
+       /* find the tensor decomposition of aT. There is a weird bug in the case 
+          of Omega+ in dimension 10 and in such cases only a decomposition with 
+          dimensions 6X4 is acceptable. */
+       
+       repeat 
+           delete aT`TensorProductFlag;
+           v := IsTensor( aT ); assert v; 
+
+           //get the dimensions of the tensor factors
+           dt1 := Dimension( TensorFactors( aT )[1] ); 
+           dt2 := Dimension( TensorFactors( aT )[2] );
+       until <type,dim,dt1> ne <"Omega+",10,4>;
+
        /* the dimensions dt1 and dt2 of the tensor factors must be equal to 
           dH and dK in this order. If not, we must swap H and K. */
-                                  
+
+       dt1 := Dimension( TensorFactors( aT )[1] ); 
+       dt2 := Dimension( TensorFactors( aT )[2] );                           
        if dt1 ne dH then 
            temp := dH; dH := dK; dK := temp;
            temp := dimH; dimH := dimK; dimK := temp;
@@ -308,11 +317,9 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
        end if;
     
        // calculate the basis for aT that reflects the tensor structure
-    
        tbas := TensorBasis( aT )^-1;
-    
-       // set of the maps from aT into the tensor components
 
+       // set of the maps from aT into the tensor components
        ch := pmap< GL( dimg, q ) -> GL( dH, q ) | x :-> SplitTensor( 
                      tbas*x@at*tbas^-1, dH, dK )[1] >;
     
@@ -321,17 +328,16 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
     
        gens1h := [ GL(dimH,q)!__funcSLdqToAltSquare( x@ch ) : x in gensCD ];
        gens2h := [ x@ah : x in gensCD ]; 
-    
+
        gens1k := [ GL(dimK,q)!__funcSLdqToAltSquare( x@ck ) : x in gensCD ];
        gens2k := [ x@ak : x in gensCD ];
     
-       vh, scalarsh := IsSimilarModScalar( gens1h, gens2h ); 
-    
+       vh, scalarsh := IsSimilarModScalar( gens1h, gens2h );
+       
        if vh then
-           vk, scalarsk := IsSimilarModScalar( gens1k, gens2k );
+           vk, scalarsk := IsSimilarModScalar( gens1k, gens2k ); assert vk;
            gens2h := [ ScalarMatrix( GF(q), dimH, scalarsh[i] )*
-                       gens2h[i] : 
-                       i in [1..#gensCD] ];
+                       gens2h[i] : i in [1..#gensCD] ];
            gens2k := [ ScalarMatrix( GF(q), dimK, scalarsk[i] )*gens2k[i] : 
                        i in [1..#gensCD] ];                            
        else 
@@ -347,28 +353,20 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
            temp := mK; mK := mH; mH := temp;       
        end if;
     
-       assert vh and vk;
-    
        M1H := GModule( sub< GL( dimH, q ) | gens1h >);
        M2H := GModule( sub< GL( dimH, q ) | gens2h >);
     
-       v, trmh := IsIsomorphic( M1H, M2H ); assert v;
+       v, trmh := IsIsomorphic( M1H, M2H ); assert v; 
     
        M1K := GModule( sub< GL( dimK, q ) | gens1k >);
        M2K := GModule( sub< GL( dimK, q ) | gens2k >);
     
        v, trmk := IsIsomorphic( M1K, M2K ); assert v;
- 
+
        gggh := [ __funcAltSquareToSLdq( trmh*x*trmh^-1 ) : x in gens2h ];
         
        gggk := [ __funcAltSquareToSLdq( trmk*x*trmk^-1 ) : x in gens2k ];
-     
-
-       print ClassicalForms( sub< GL(dH,q) | gggh > )`formType;
-       print ClassicalForms( sub< GL(dK,q) | gggk > )`formType;
-       // bas1 is [e12,e13,...,e23,...,e{k-1}{k}]
-       // bas2 is [e{k+1}{k+2},...,e{d-1}d]
-      
+           
        basH := [ M!(&+[trmh[j][i]*Basis( mH )[i] : 
                        i in [1..dimH]]) : j in [1..dimH]];
     
@@ -377,7 +375,7 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
 
        tbas := [ M!(&+[tbas[j][i]*Basis( mT )[i] : 
                       i in [1..dT]]) : j in [1..dT]];
-
+        
         // TENSOR SPECIFIC CODE ENDS HERE
     end if;
 
@@ -403,7 +401,7 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
                      i in [1..dimH]]) : j in [1..dimH]];
         basK := [ M!(&+[bas2[j][i]*Basis( mK )[i] : 
                      i in [1..dimK]]) : j in [1..dimK]];
-    
+
         /* Construct the image of C in the tensor product component. It must be 
         isomorphic to the tensor product of the preimages of the 
         groups induced on the alt square components */
@@ -415,8 +413,6 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
            aH tensor (aK)^-t or (aH)^-t tensor (aK)^-t where ^-t is the inverse
            transpose isomorphism. We need to discover which one it is and 
            modify bas1 and bas2 accordingly. */
-
-        
       
         //foundflag := false;   // flag to show if the right case is found
     
@@ -424,7 +420,6 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
         
         if not v then 
             for cc in [1..3] do
-                //print "cc", cc;
                 if cc eq 2 then 
                     genstt := [ TensorProduct( Transpose( x@ah@c1 )^-1, x@ak@c2 ) : 
                             x in gensCD ];
@@ -547,7 +542,7 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
         
     tr := Matrix( GF( q ), dimg, dimg, [ Eltseq( x ) : x in bas ] );
     //if dim eq 20 then error(111); end if;
-    
+        
     tr := GL( dimg, q )![ Eltseq( x ) : x in bas ];
     p12 := funcpos_altsquare( dim, 1, 2 );
     p13 := funcpos_altsquare( dim, 1, dH+1 );
@@ -587,7 +582,7 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
        end for; 
     catch e  
       z0 := PrimitiveElement( GF( q ));
-      lambda := Sqrt( z0*lambdasq ); 
+      lambda := Sqrt( z0*lambdasq );
       for i in [1..dH] do
           for j in [dH+1..dim] do
               pij := funcpos_altsquare( dim, i, j );
@@ -606,7 +601,7 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
     end try; 
     
     tr := GL( dimg, q )![ Eltseq( x ) : x in bas ];
-    
+      
     // construct the maps between GL(dim,q) and G
     
     a := map< GL( dim, q ) -> GL( dimg, q ) | 
@@ -624,7 +619,8 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
         try
           gens := [ x@b : x in GeneratorsSequence( G )];
         catch e
-          error(1);
+          return false, a, b, tr, CD;
+          error( "could not compute preimages of generators" );
         end try;
         M1 := GModule( sub< GL( dimg, q ) | 
                      [ __funcSLdqToAltSquare( MatrixAlgebra( GF( q ), dim )!x ) 

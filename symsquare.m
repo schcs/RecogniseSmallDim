@@ -298,8 +298,10 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
     until de ge eiglim1 and de le eiglim2;
     vprint SymSquareVerbose: "#   Inv found dim", dim, "in ", Cputime()-cputm;
 
-    if type eq "SU" and dim le 10 and q le 25 then 
-        NrGensCentInv := 20;          
+    if type eq "SU" and q eq 9 then 
+        NrGensCentInv := 20;
+    elif type eq "SU" and dim le 10 and q le 25 then 
+        NrGensCentInv := 20;
     else    
         NrGensCentInv := 10; 
     end if;
@@ -328,7 +330,7 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
         DerivedLength := 1; 
     end if;
     
-    count := 0;
+    count := 1;
     repeat            
         count := count + 1; 
         if count gt 100 then error( 111 ); end if;
@@ -410,7 +412,6 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
 
     while #mins ne 3 or &+[ Dimension( x ) : x in mins ] ne dimg do
 
-        print "jjjjjjjjjjjjj";
         repeat
             x := Random( CD ); xa := x@at;
         until MinimalPolynomial( xa ) ne MinimalPolynomial( mns*xa );
@@ -424,15 +425,22 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
 
     aH := sub< GL( dimH, q ) | [ x@ah : x in gensCD ]>;
     aK := sub< GL( dimK, q ) | [ x@ak : x in gensCD ]>;
+    
+    if dH gt 3 then 
+        aH := MyDerivedGroupMonteCarlo( aH );
+    end if;
+
+    if dK gt 3 then 
+        aK := MyDerivedGroupMonteCarlo( aK );       
+    end if;
 
     //error(111);
     assert IsIrreducible( aH ) and IsIrreducible( aK );
+    //  assert IsProbablyPerfect( aH ) and IsProbablyPerfect( aK );
      
     // the recursive call to recognise the smaller-dimensional sym squares aH and aK
-    _, b1, c1, bas1 := RecogniseSymSquareFunc( aH : 
-                            type := type );
-    _, b2, c2, bas2 := RecogniseSymSquareFunc( aK : 
-                            type := type );
+    _, b1, c1, bas1 := RecogniseSymSquareFunc( aH : type := type );
+    _, b2, c2, bas2 := RecogniseSymSquareFunc( aK : type := type );
     
     // bas1 is [e11, e12,...,e1k,...,ekk]
     // bas2 is [e{k+1}{k+1},...,edd]
@@ -483,17 +491,6 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
     bas := BuildBasisOmega( G, bas1, bas2, tbas : type := type, 
                 typeh := type, typek := type );
     tr := GL( dimg, q )!bas; //[ Eltseq( x ) : x in bas ];
-
-    try
-        ttt := __funcSymSquareToSLdq( tr*CD.1*tr^-1 );
-    catch e
-        error( "ttt failed" );
-    end try; 
-
-    if Category( ttt ) eq BoolElt then 
-        error( "ttt failed" );
-    end if;
-
 
     /* Finally we have a complete basis. However, the vectors 
        eij that were returned by the tensor recognition  
@@ -570,7 +567,10 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
         try
             gens := [ x@b : x in GeneratorsSequence( G )];
         catch e 
-            error( "Failed to apply map from G to classical group" );
+            f := Open( "debugfile", "w" );
+            WriteObject( f, G ); print( "G written to file" );
+            delete f;
+            error( "Failed to apply map from G to classical group in dim "*IntegerToString( dim ));
         end try;
         M1 := GModule( sub< GL( dimg, q ) | 
                       [ SymmetricSquare( MatrixAlgebra( GF( q ), dim )!x ) 

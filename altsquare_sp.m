@@ -87,7 +87,7 @@ RecogniseAltSquareSpFunc := function( G : CheckResult := true,
         if #dims ne 3 then return true; end if;
         dims0 := [ SolveAltSquareDimEq( x : type := "Sp" ) : x in dims ];
         notz := [ i : i in [1..3] | dims0[i] ne 0 ];
-        if #notz ne 2 then print dims, "rejected"; return false; end if;
+        if #notz ne 2 then return false; end if;
         ind := [ x : x in [1..3] | not x in notz ][1];
 
         res := dims0[notz[1]]*dims0[notz[2]] eq dims[ind];

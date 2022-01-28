@@ -1,5 +1,3 @@
-Sp/SU with various dimensions "Classical forms must be irreducible" error message
-        probable cause: not enough generator?
 
 Sp( 12, 3) sym square: infinite loop in involution selection?
 
@@ -13,4 +11,4 @@ Omega-, 10, 3: does not  find suitable involution
 AltSquare Omega* does not work with recursion
 
 AltSquare( SU, 20, 5 ) IsTensor( aT ) fails
-
+AltSquare( SU, 20, 3 ) fails at v, al := IsIsomorphic( T, TT ); assert v;

@@ -8,3 +8,5 @@ sp_aux.m
 altsquare_sp.m
 altsquare.m
 recogsmalldim.m
+
+#omega_10_experiment.m

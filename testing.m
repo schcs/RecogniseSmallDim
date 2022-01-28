@@ -84,7 +84,7 @@ AltSquare := function( type, n, q : twist := false )
              Dimension( x ) gt 1 ];
   assert #comps eq 1;
   S := ActionGroup( comps[1] );
-    
+
   if twist then
       x := Random( GL( Dimension( S ), q ));
   else 
@@ -180,8 +180,8 @@ TestAltSquare2 := function( type, limd, limq, nr :
     ranged := case< type | "SL": [7..limd], "GL": [7..limd], 
               "Sp": [8..limd by 2],
               "SU": [7..limd], "GU": [7..limd],
-              "Omega+": [12..limd by 2], "GO+": [12..limd by 2], "SO+": [12..limd by 2], 
-              "Omega-": [12..limd by 2], "GO-": [12..limd by 2], "SO-": [12..limd by 2],
+              "Omega+": [10..limd by 2], "GO+": [12..limd by 2], "SO+": [12..limd by 2], 
+              "Omega-": [10..limd by 2], "GO-": [12..limd by 2], "SO-": [12..limd by 2],
               "Omega": [11..limd by 2], "GO": [11..limd by 2], "SO": [11..limd by 2],
               default: [3..limd]  >;
     
