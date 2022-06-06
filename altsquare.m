@@ -58,33 +58,20 @@ end function;
     
 // three dimensional recognition    
 
-RecogniseAltSquareDim3 := function( G : type := "SL", 
-                                    CheckResult := CheckResult )
+RecogniseAltSquareDim3 := function( G : type := "SL" )
     
     vprint SymSquareVerbose: "# Recog AltSquare dim 3";
     q := #CoefficientRing( G );
       
     a := map< GL(3,q) -> GL(3,q) | x :-> __funcSLdqToAltSquare( x )>;
-    b := a; // the inverse function is the same
-    
-    if CheckResult then
-        vprint SymSquareVerbose: "# Checking final result";
-        gens := [ x@b : x in GeneratorsSequence( G )];
-        M1 := GModule( sub< GL( 3, q ) | 
-                      [ __funcSLdqToAltSquare( MatrixAlgebra( GF( q ), 3 )!x ) 
-                        : x in gens ]>);
-        if not IsIsomorphic( M1, GModule( G )) then
-            return false, _, _, _;
-        end if;
-        vprint SymSquareVerbose: "# Check passed.";
-    end if;
-    
-    return true, a, b, Basis( VectorSpace( GF( q ), 3 ));
+    b := map< GL(3,q) -> GL(3,q) | x :-> __funcAltSquareToSLdq( x )>; 
+        
+    return true, a, b, One( GL( 3, q ));
 end function;
     
 // 4-dimensional recognition    
     
-RecogniseAltSquareDim4 := function( G : type := "SL", CheckResult := true )
+RecogniseAltSquareDim4 := function( G : type := "SL" )
     
     vprint SymSquareVerbose: "# Recog AltSquare dim 4";
     cputm := Cputime();
@@ -105,18 +92,6 @@ RecogniseAltSquareDim4 := function( G : type := "SL", CheckResult := true )
     
     b := pmap< GL( 6, q ) -> GL( 4, q ) | 
          x :-> __funcAltSquareToSLdq( x^mat ) >;
-    
-    if CheckResult then
-        vprint SymSquareVerbose: "# Checking final result";
-        gens := [ x@b : x in GeneratorsSequence( G )];
-        M1 := GModule( sub< GL( 6, q ) | 
-                      [ __funcSLdqToAltSquare( MatrixAlgebra( GF( q ), 4 )!x ) 
-                        : x in gens ]>);
-        if not IsIsomorphic( M1, GModule( G )) then
-	return false, _, _, _;
-        end if;
-        vprint SymSquareVerbose: "# Check passed.";
-    end if;
 
     vprint SymSquareVerbose: "# Recog AltSquare dim 4 took", Cputime()-cputm;
     
@@ -130,15 +105,41 @@ forward RecogniseAltSquareFunc;
       
 RecogniseAltSquareFunc := function( G :  Method := "Recursive",
                                          type := "SL", 
-                                         CheckResult := true )
+                                         IsRecursiveCall := false )
     cputm := Cputime(); 
     q := #CoefficientRing( G ); 
+    _, p := IsPrimePower( q );
     dimg := Dimension( G );
     
     // the natural dimension of G
     dim := SolveAltSquareDimEq( dimg : type := type ); 
     vprint SymSquareVerbose: "# Recog AltSquare dim", dim, 
             "type", type, "method", Method ;
+
+    if type eq "SL" and dim in {5,6} then 
+        return RecogniseAltSquareWithSmallDegree( G : type := type );
+    elif type eq "SU" and dim in {5, 6} then 
+        return RecogniseAltSquareWithSmallDegree( G : type := type );
+     elif type eq "Omega-" and dim in {8,10} then 
+        return RecogniseAltSquareWithSmallDegree( G : type := type );
+    elif type eq "Sp" and dim eq 10 and p eq 3 then   
+        return RecogniseAltSquareWithSmallDegree( G : type := type );
+    elif type eq "Omega+" and dim eq 10 then
+        return RecogniseAltSquareWithSmallDegree( G : type := type );
+    elif type eq "Omega" and dim eq 9 and p eq 3 then
+        return RecogniseAltSquareWithSmallDegree( G : type := type );
+    end if; 
+
+    if type eq "Sp" then
+      return RecogniseAltSquareSpFunc( G : Method := Method );
+    end if;
+                                                                       
+    // in small dimension, call other functions
+    case dim: 
+      when 2: return RecogniseAltSquareDim2( G );
+      when 3: return RecogniseAltSquareDim3( G );
+      when 4: return RecogniseAltSquareDim4( G );
+    end case;
     
     //if dim le 8 then Method := "Tensor"; end if;
     /* find an involution with sufficiently large minus one eigenspace and 
@@ -389,10 +390,8 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
         aK := MyDerivedGroupMonteCarlo( aK : 
                       DerivedLength := case< dK | 4: 2, default: 1 >); 
 
-        v1, b1, c1, bas1 := RecogniseAltSquare( aH : CheckResult := false, 
-                            type := typeh );
-        v2, b2, c2, bas2 := RecogniseAltSquare( aK : CheckResult := false, 
-                            type := typek );
+        v1, b1, c1, bas1 := RecogniseAltSquareFunc( aH : type := typeh, IsRecursiveCall := true );
+        v2, b2, c2, bas2 := RecogniseAltSquareFunc( aK : type := typek, IsRecursiveCall := true );
         assert v1 and v2;
     
         // bas1 is [e12,e13,...,e23,...,e{k-1}{k}]
@@ -457,48 +456,6 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
         end if;
     
         assert v;
-     /*   if v then
-            vprint SymSquareVerbose: "# No invtranspose is involved in dim ", dim;
-            foundflag := true;
-        elif not foundflag and not v then
-            genstt := [ TensorProduct( Transpose( x@ah@c1 )^-1, x@ak@c2 ) : 
-                        x in gensCD ];
-            v, signs := IsSimilarModMinus1List( genst, genstt );
-        end if;
-    
-        if not foundflag and v then
-            vprint SymSquareVerbose: "# Invtrans is involved in first comp in dim ", 
-                    dim;
-            basH := [ basH[6], -basH[5], basH[4], basH[3], -basH[2], basH[1]];
-            foundflag := true;
-        elif not foundflag and not v then
-            genstt := [ TensorProduct( x@ah@c1, Transpose( x@ak@c2 )^-1 ) : 
-                        x in gensCD ];
-            v, signs := IsSimilarModMinus1List( genst, genstt );
-        end if;
-    
-        if not foundflag and v then
-             vprint SymSquareVerbose: "# Invtrans is involved in second comp in dim ", 
-                        dim;
-             basK := [ basK[6], -basK[5], basK[4], basK[3], -basK[2], basK[1]];
-             foundflag := true;
-        elif not foundflag and not v then
-            genstt := [ TensorProduct( Transpose( x@ah@c1 )^-1, 
-                              Transpose( x@ak@c2 )^-1 ) : x in gensCD ];
-            v, signs := IsSimilarModMinus1List( genst, genstt );
-            if v then 
-            
-
-    
-        if not foundflag and v then
-            vprint SymSquareVerbose: "# Invtrans is involved in both comp in dim ", 
-                    dim;
-            basH := [ basH[6], -basH[5], basH[4], basH[3], -basH[2], basH[1]];
-            basK := [ basK[6], -basK[5], basK[4], basK[3], -basK[2], basK[1]];
-            foundflag := true;
-        end if;
-
-        assert foundflag; */
         
         genstt := [ signs[i]*genstt[i] : i in [1..#genstt]];        
         T := GModule( sub< GL( dimT, q ) | genst >);
@@ -603,40 +560,20 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
     tr := GL( dimg, q )![ Eltseq( x ) : x in bas ];
       
     // construct the maps between GL(dim,q) and G
-    
+
     a := map< GL( dim, q ) -> GL( dimg, q ) | 
          x :-> GL( dimg, q )!__funcSLdqToAltSquare( x )^tr >;
     
     b := pmap< GL( dimg, q ) -> GL( dim, q ) |
          x :-> GL( dim, q )!__funcAltSquareToSLdq( x^(tr^-1)) >;
+
     
     vprint SymSquareVerbose: "# Recog AltSquare dim", dim, "took ", 
       Cputime()-cputm;
-    
-    // if CheckResult is set, we perform a check
-    if CheckResult then
-        vprint SymSquareVerbose: "# Checking final result";
-        try
-          gens := [ x@b : x in GeneratorsSequence( G )];
-        catch e
-          return false, a, b, tr, CD;
-          error( "could not compute preimages of generators" );
-        end try;
-        M1 := GModule( sub< GL( dimg, q ) | 
-                     [ __funcSLdqToAltSquare( MatrixAlgebra( GF( q ), dim )!x ) 
-                        : x in gens ]>);
-        if not IsIsomorphic( M1, GModule( G )) then
-            vprint SymSquareVerbose: "# Check failed.";
-            return false, a, b, tr, CD;
-        end if;
-        vprint SymSquareVerbose: "# Check passed.";
-    end if;
-        
-    return true, a, b, tr, CD;
+            
+    return true, a, b, tr;
 end function;
                 
-forward RecogniseAltSquare;
-    
 intrinsic RecogniseAltSquare( G::GrpMat : 
             type := "SL", 
             CheckResult := true,
@@ -656,64 +593,67 @@ intrinsic RecogniseAltSquare( G::GrpMat :
   For SL(d,q) with d=5,6,8 the tensor decomposition version is used while for
   SL(d,q) with d=7 or d>8 the recursive version is called as default. 
   This choice can be overwritten by setting UseTensorDecomposition to be true.}                                                
-  dimg := Dimension( G );
-  dim := SolveAltSquareDimEq( dimg : type := type );                         
-  p := Characteristic( CoefficientRing( G ));
+    dimg := Dimension( G );
+    dim := SolveAltSquareDimEq( dimg : type := type );        
+    q := #CoefficientRing( G );                 
+    _, p := IsPrimePower( q );
     
-  error if p eq 2, 
+    error if p eq 2, 
         "the field cannot have characteristic 2";
-
-  if type eq "SL" and dim in {5,6} then 
-    return RecogniseAltSquareWithSmallDegree( G : type := type );
-  elif type eq "SU" and dim in {5, 6} then 
-    return RecogniseAltSquareWithSmallDegree( G : type := type );
-  elif type eq "Omega-" and dim in {8,10} then 
-    return RecogniseAltSquareWithSmallDegree( G : type := type );
-  elif type eq "Sp" and dim eq 10 and p eq 3 then   
-    return RecogniseAltSquareWithSmallDegree( G : type := type );
-  elif type eq "Omega+" and dim eq 10 then
-    return RecogniseAltSquareWithSmallDegree( G : type := type );
-  elif type eq "Omega" and dim eq 9 and p eq 3 then
-    return RecogniseAltSquareWithSmallDegree( G : type := type );
-  end if; 
-
-  //error if dim lt 3, 
-  //      "the dimension must be at least 3";
-  error if type eq "Sp" and dim lt 8, 
+  
+    error if type eq "Sp" and dim lt 8, 
         "Sp needs to have dimension at least 8";
-  error if type eq "Omega+" and dim lt 10, 
+    error if type eq "Omega+" and dim lt 10, 
         "Omega+ must have dimension at least 10";
-  error if type eq "Omega-" and dim lt 10,
+    error if type eq "Omega-" and dim lt 10,
         "Omega- must have dimension at least 10";
-  error if type eq "Omega" and dim lt 9, 
+    error if type eq "Omega" and dim lt 9, 
         "Omega must have dimension at least 9";
 
-  if type eq "Sp" then
-      return RecogniseAltSquareSpFunc( G : 
-      CheckResult := CheckResult,
-      Method := Method );
-  end if;
-                                                                       
-  // in small dimension, call other functions
-  case dim: 
-      when 2: return RecogniseAltSquareDim2( G );
-      when 3: return RecogniseAltSquareDim3( G : CheckResult := CheckResult );
-      when 4: return RecogniseAltSquareDim4( G : CheckResult := CheckResult );
-  end case;
-  
-  // in dimensions 5, 6 and 8 we enforce UseTensorDecomposition
-      
-/*  if dim le 16 then 
-    Method := "Tensor";
-  elif type eq "Omega+" and dim lt 20 then 
-    Method := "Tensor";
-  elif type eq "Omega-" and dim lt 20 then 
-    Method := "Tensor";
-  elif type eq "Omega" and dim lt 20 then 
-    Method := "Tensor";
-  end if; */
-
-  return RecogniseAltSquareFunc( G : CheckResult := CheckResult, 
-                              type := type, 
+    v, _, _, tr := RecogniseAltSquareFunc( G : type := type, 
                               Method := Method );  
+    assert v;
+
+    if type in { "Omega+", "Omega-", "Omega" } then 
+        form := ClassicalForms( sub< GL( dim, q ) | 
+                    [ __funcAltSquareToSLdq( x^(tr^-1) : type := type ) : 
+                            x in GeneratorsSequence( G )] >)`bilinearForm;
+        tr_form := TransformForm( form, case< type | 
+                                            "Omega+": "orthogonalplus", 
+                                            "Omega-": "orthogonalminus", 
+                                            "Omega": "orthogonalcircle", 
+                                            default: false  >);        
+    elif type eq "SU" then 
+        form := ClassicalForms( sub< GL( dim, q ) | 
+                    [ __funcAltSquareToSLdq( x^(tr^-1)) : x in GeneratorsSequence( G )] >)`sesquilinearForm;
+        tr_form := TransformForm( form, "unitary" );
+    else 
+        tr_form := One( GL( dim, q ));
+    end if;
+    
+    a := map< GL( dim, q ) -> GL( dimg, q ) | 
+         x :-> GL( dimg, q )!__funcSLdqToAltSquare( x^(tr_form^-1) : type := type )^tr >;
+    
+    b := pmap< GL( dimg, q ) -> GL( dim, q ) |
+         x :-> (GL( dim, q )!__funcAltSquareToSLdq( x^(tr^-1) : type := type ))^tr_form >;
+
+    // if CheckResult is set, we perform a check
+    if CheckResult then
+        vprint SymSquareVerbose: "# Checking final result";
+        try
+          gens := [ x@b : x in GeneratorsSequence( G )];
+        catch e
+          error( "could not compute preimages of generators" );
+        end try;
+        M1 := GModule( sub< GL( dimg, q ) | 
+                     [ __funcSLdqToAltSquare( MatrixAlgebra( GF( q ), dim )!(x^(tr_form^-1)) : type := type ) 
+                        : x in gens ]>);
+        if not IsIsomorphic( M1, GModule( G )) then
+            vprint SymSquareVerbose: "# Check failed.";
+            return false, a, b, tr;
+        end if;
+        vprint SymSquareVerbose: "# Check passed.";
+    end if;
+
+    return true, a, b, _;
 end intrinsic;

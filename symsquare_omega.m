@@ -5,7 +5,7 @@ import "smalldimreps.m":__funcSLdqToSymSquare, __funcSymSquareToSLdq,
 SolveSymSquareDimEq, funcpos_symsquare, funcposinv_symsquare, BasisMatrixForSymSquareOmega;
 
 import "auxfunctions.m": MyDerivedGroupMonteCarlo, IsSimilarToScalarMultiple, 
-    SplitTensor, IsSimilarModScalar, TransformToForm;
+    SplitTensor, IsSimilarModScalar, TransformToForm, OldFormOmegaMinus;
 
 import "symsquare_omega_aux.m":TestBasisOmega, OmegaBasisFromComponents, 
     BuildBasisOmega, TypeOfSymSquareOmega, SymSquareOmegaBasisWithOmegaMinus, 
@@ -16,8 +16,8 @@ forward RecogniseSymSquareOmegaFunc;
 
 RecogniseSymSquareOmegaFunc := function( G : 
                             type := "Omega+", 
-                            CheckResult := true,
-                            Method := "Recursion" )
+                            Method := "Recursion", 
+                            RecursiveCall := false )
     
     cputm := Cputime();
           
@@ -265,8 +265,8 @@ RecogniseSymSquareOmegaFunc := function( G :
 
         // the recursive call to recognise the smaller-dimensional sym squares aH and aK
     
-        vh, b1, c1, bas1 := RecogniseSymSquareOmegaFunc( aH : type := typeh );
-        vk, b2, c2, bas2 := RecogniseSymSquareOmegaFunc( aK : type := typek );
+        vh, b1, c1, bas1 := RecogniseSymSquareOmegaFunc( aH : type := typeh, RecursiveCall := true );
+        vk, b2, c2, bas2 := RecogniseSymSquareOmegaFunc( aK : type := typek, RecursiveCall := true );
         
         assert vh and vk;
 
@@ -648,16 +648,6 @@ RecogniseSymSquareOmegaFunc := function( G :
         end if;
     end if; 
 
-    //if typeh ne "Omega-" or dH ne 6 then 
-    //        return 0, _, _, _, _, _, _, _;
-    //end if;
-
-   //TestBasisOmega( G, oldbasH, basK, oldbasT, wH, -wH, G : 
-   //                 type := "Omega+", typeh := "Omega-", typek := "Omega-", ww := 1/2 );
-   
-   //TestBasisOmega( G, basH, basK, basT, wH, -wH, G : type := "Omega+", typeh := "Omega-", typek := "Omega-", ww := 1/2 );
-   //return CD, basH, basK, basT, oldbasH, oldbasT, wH, form;
-
    bas := BuildBasisOmega( G, basH, basK, basT : type := type, 
                                               typeh := typeh, 
                                               typek := typek,
@@ -700,8 +690,6 @@ RecogniseSymSquareOmegaFunc := function( G :
 
    if pdivdim then posK2 := posK2 - 1; end if;
 
-   //error(3331121);
-
    vK := Sqrt( form[posK1,posK2] )^-1; 
    //posT := funcpos_symsquare( dim, dim-dH div 2, dim : type := type );
    //if pdivdim then posT := posT -1; end if;
@@ -727,7 +715,6 @@ RecogniseSymSquareOmegaFunc := function( G :
    g := sub< GL( dimg, q ) | { bas*x*bas^-1 : x in Generators( G0 )}>;
   
    //return CD, GL( dimg, q )!bas;
-
 
    if not pdivdim then 
 
@@ -800,29 +787,23 @@ RecogniseSymSquareOmegaFunc := function( G :
                                               scalars := coeffs, 
                                               ww := ww );
    tr := GL( dimg, GF( q ))!bas;
-    // construct the maps between GL(dim,q) and G
+   
+   if not RecursiveCall and type eq "Omega-" then
+        tr_new_form := TransformForm( OldFormOmegaMinus( dim, q), "orthogonalminus" );
+   else 
+        tr_new_form := One( GL( dim, q ));
+   end if; 
+
+   // construct the maps between GL(dim,q) and G
     
     a := map< GL( dim, q ) -> GL( dimg, q ) | 
-         x :-> GL( dimg, q )!__funcSLdqToSymSquare( x : type := type )^tr >;
+         x :-> GL( dimg, q )!__funcSLdqToSymSquare( x^(tr_new_form^-1) : type := type )^tr >;
     
     b := pmap< GL( dimg, q ) -> GL( dim, q ) |
-         x :-> GL( dim, q )!__funcSymSquareToSLdq( x^(tr^-1) : type := type ) >;
+         x :-> GL( dim, q )!__funcSymSquareToSLdq( x^(tr^-1) : type := type )^tr_new_form >;
     
     vprint SymSquareVerbose: "# Recog SymSquare dim", dim, "took ", 
       Cputime()-cputm;
-    
-    // if CheckResult is set, we perform a check
-    if CheckResult then
-        vprint SymSquareVerbose: "# Checking final result";
-        gens := [ x@b : x in GeneratorsSequence( G )];
-        M1 := GModule( sub< GL( dimg, q ) | 
-                      [ __funcSLdqToSymSquare( x : type := type ) 
-                        : x in gens ]>);
-        if not IsIsomorphic( M1, GModule( G )) then
-	return false, _, _, _;
-        end if;
-        vprint SymSquareVerbose: "# Check passed.";
-    end if;
-        
+            
     return true, a, b, tr;
 end function;

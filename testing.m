@@ -36,7 +36,6 @@ SymSquare := function( type, n, q : twist := false )
              Dimension( x ) gt 1 ];
   assert #comps eq 1;
   S := ActionGroup( comps[1] );
-    
   
   if twist then
       S := S^Random( GL( Dimension( S ), q ));
@@ -165,7 +164,7 @@ TestAltSquare := function( type, d, q : NrTries := 100,
         v, a, b, bas := RecogniseAltSquare( G : type := type0, 
                                                 CheckResult := true,
                                                 Method := Method );
-        assert v and { x@b@a*x^-1 eq x^0 : x in { Random( G ) : z in [1..100] }}           eq { true };
+        assert v and { x@b@a*x^-1 eq x^0 : x in { Random( G ) : z in [1..100] }} eq { true };
     end for;
     
     return true;
@@ -177,12 +176,11 @@ TestAltSquare2 := function( type, limd, limq, nr :
     vb := GetVerbose( "SymSquareVerbose" );
     SetVerbose( "SymSquareVerbose", 0 );
     
-    ranged := case< type | "SL": [7..limd], "GL": [7..limd], 
-              "Sp": [8..limd by 2],
-              "SU": [7..limd], "GU": [7..limd],
+    ranged := case< type |  "Sp": [8..limd by 2],
+              "SU": [3..limd], "GU": [3..limd],
               "Omega+": [10..limd by 2], "GO+": [12..limd by 2], "SO+": [12..limd by 2], 
               "Omega-": [10..limd by 2], "GO-": [12..limd by 2], "SO-": [12..limd by 2],
-              "Omega": [11..limd by 2], "GO": [11..limd by 2], "SO": [11..limd by 2],
+              "Omega": [9..limd by 2], "GO": [9..limd by 2], "SO": [9..limd by 2],
               default: [3..limd]  >;
     
     qs := [ x : x in [3..limq] | IsPrimePower( x ) and IsOdd( x )];

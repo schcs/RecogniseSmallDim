@@ -25,7 +25,7 @@ AddAttribute( GrpMat, "BasisMatrixFromComponents" );
 /* The recognition procedure for SX( 2, q ). It is based on the fact that 
    SymSquare( SL( 2, q )) is 3-dimensional and preserves a quadratic form. */
     
-RecogniseSymSquareDim2 := function( G : CheckResult := true )
+RecogniseSymSquareDim2 := function( G )
     
     vprint SymSquareVerbose: "# Recog SymSquare dim 2";
     cputm := Cputime();
@@ -49,26 +49,13 @@ RecogniseSymSquareDim2 := function( G : CheckResult := true )
          x :-> __funcSymSquareToSLdq( x^mat )>;
     
     vprint SymSquareVerbose: "# Recog SymSquare dim 2 took", Cputime()-cputm;
-    
-    // if CheckResult is set, we perform a check
-    if CheckResult then
-        vprint SymSquareVerbose: "# Checking final result";
-        gens := [ x@b : x in GeneratorsSequence( G )];
-        M1 := GModule( sub< GL( 3, q ) | 
-                      [ SymmetricSquare( MatrixAlgebra( GF( q ), 2 )!x ) 
-                        : x in gens ]>);
-        if not IsIsomorphic( M1, GModule( G )) then
-	        return false, _, _, _;
-        end if;
-        vprint SymSquareVerbose: "# Check passed.";
-    end if;
 
     return true, a, b, mat^-1;
 end function;    
     
 // The recognition procedure for SX(3,q)    
     
-RecogniseSymSquareDim3 := function( G : type := "SL", CheckResult := true )
+RecogniseSymSquareDim3 := function( G : type := "SL" )
     
     vprint SymSquareVerbose: "# Recog SymSquare dim 3";
     cputm := Cputime();
@@ -221,19 +208,6 @@ RecogniseSymSquareDim3 := function( G : type := "SL", CheckResult := true )
          x :-> GL( 3, q )!__funcSymSquareToSLdq( x^(tr^-1)) >;
     vprint SymSquareVerbose: "# Recog SymSquare dim 3 took ", Cputime()-cputm;
 
-    // if CheckResult is set, we perform a check
-    if CheckResult then
-        vprint SymSquareVerbose: "# Checking final result";
-        gens := [ x@b : x in GeneratorsSequence( G )];
-        M1 := GModule( sub< GL( 6, q ) | 
-                      [ SymmetricSquare( MatrixAlgebra( GF( q ), 3 )!x ) 
-                        : x in gens ]>);
-        if not IsIsomorphic( M1, GModule( G )) then
-	        return false, _, _, _;
-        end if;
-        vprint SymSquareVerbose: "# Check passed.";
-    end if;
-
     return true, a, b, tr;
 end function;
 
@@ -253,7 +227,7 @@ end function;
         
 // The general recursive function. 
 forward RecogniseSymSquareFunc;
-RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
+RecogniseSymSquareFunc := function( G : type := "SL", IsRecursiveCall := false )
     
     cputm := Cputime();
 
@@ -283,7 +257,7 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
     // For Omega groups we call other function 
 
     if type in { "Omega+", "Omega-", "Omega" } then 
-      return RecogniseSymSquareOmegaFunc( G : type := type, CheckResult := CheckResult );
+      return RecogniseSymSquareOmegaFunc( G : type := type );
     end if;
         
     /* find an involution with sufficiently large minus one eigenspace and 
@@ -439,8 +413,8 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
     //  assert IsProbablyPerfect( aH ) and IsProbablyPerfect( aK );
      
     // the recursive call to recognise the smaller-dimensional sym squares aH and aK
-    _, b1, c1, bas1 := RecogniseSymSquareFunc( aH : type := type );
-    _, b2, c2, bas2 := RecogniseSymSquareFunc( aK : type := type );
+    _, b1, c1, bas1 := RecogniseSymSquareFunc( aH : type := type, IsRecursiveCall := true );
+    _, b2, c2, bas2 := RecogniseSymSquareFunc( aK : type := type, IsRecursiveCall := true );
     
     // bas1 is [e11, e12,...,e1k,...,ekk]
     // bas2 is [e{k+1}{k+1},...,edd]
@@ -550,36 +524,34 @@ RecogniseSymSquareFunc := function( G : type := "SL", CheckResult := true )
     tr := GL( dimg, q )!bas;//[ Eltseq( x ) : x in bas ];
 
     // construct the maps between GL(dim,q) and G
-    
+
+    // Standardise the classical form preserved by G
+    if not IsRecursiveCall and type in { "Sp", "Omega+", "Omega-", "Omega" } then 
+        form := ClassicalForms( sub< GL( dim, q ) | 
+                    [ __funcSymSquareToSLdq( x^(tr^-1)) : x in GeneratorsSequence( G )] >)`bilinearForm;
+        tr_form := TransformForm( form, case< type | 
+                                            "Sp": "symplectic", 
+                                            "Omega+": "orthogonalplus", 
+                                            "Omega-": "orthogonalminus", 
+                                            "Omega": "orthogonalcircle", 
+                                            default: false  >);        
+    elif not IsRecursiveCall and type eq "SU" then 
+        form := ClassicalForms( sub< GL( dim, q ) | 
+                    [ __funcSymSquareToSLdq( x^(tr^-1)) : x in GeneratorsSequence( G )] >)`sesquilinearForm;
+        tr_form := TransformForm( form, "unitary" );
+    else 
+        tr_form := One( GL( dim, q ));
+    end if;
+
     a := map< GL( dim, q ) -> GL( dimg, q ) | 
-         x :-> GL( dimg, q )!__funcSLdqToSymSquare( x )^tr >;
+         x :-> GL( dimg, q )!__funcSLdqToSymSquare( x^(tr_form^-1) )^tr >;
     
     b := pmap< GL( dimg, q ) -> GL( dim, q ) |
-         x :-> GL( dim, q )!__funcSymSquareToSLdq( x^(tr^-1)) >;
+         x :-> (GL( dim, q )!__funcSymSquareToSLdq( x^(tr^-1)))^tr_form >;
 
 
     vprint SymSquareVerbose: "# Recog SymSquare dim", dim, "took ", 
       Cputime()-cputm;
-    
-    // if CheckResult is set, we perform a check
-    if CheckResult then
-        vprint SymSquareVerbose: "# Checking final result";
-        try
-            gens := [ x@b : x in GeneratorsSequence( G )];
-        catch e 
-            f := Open( "debugfile", "w" );
-            WriteObject( f, G ); print( "G written to file" );
-            delete f;
-            error( "Failed to apply map from G to classical group in dim "*IntegerToString( dim ));
-        end try;
-        M1 := GModule( sub< GL( dimg, q ) | 
-                      [ SymmetricSquare( MatrixAlgebra( GF( q ), dim )!x ) 
-                        : x in gens ]>);
-        if not IsIsomorphic( M1, GModule( G )) then
-	return false, _, _, _;
-        end if;
-        vprint SymSquareVerbose: "# Check passed.";
-    end if;
         
     return true, a, b, tr;
 end function;
@@ -594,14 +566,63 @@ intrinsic RecogniseSymSquare( G::GrpMat : type := "SL",
   G to SL( d, q ), and a matrix whose rows form a basis that exhibits the 
   sym square structure. Supply CheckResult := true to check the final result.}                     
 
-    dg := Dimension( G );
-    dim := SolveSymSquareDimEq( dg : type := type );
+    dimg := Dimension( G );
+    dim := SolveSymSquareDimEq( dimg : type := type );
     q := #CoefficientRing( G );     
 
     if not IsValidParameterSetForSymSquare( type, dim, q ) then 
         error( "not valid paramenters for symmetric square recognition" );
     end if;
 
-    return RecogniseSymSquareFunc( G : type := type, CheckResult := CheckResult );
+    v, a, b, tr := RecogniseSymSquareFunc( G : type := type );
+    assert v;
+
+    // Standardise the classical form preserved by G
+    if type in { "Sp", "Omega+", "Omega-", "Omega" } then 
+        form := ClassicalForms( sub< GL( dim, q ) | 
+                    [ __funcSymSquareToSLdq( x^(tr^-1) : type := type ) : 
+                            x in GeneratorsSequence( G )] >)`bilinearForm;
+        tr_form := TransformForm( form, case< type | 
+                                            "Sp": "symplectic", 
+                                            "Omega+": "orthogonalplus", 
+                                            "Omega-": "orthogonalminus", 
+                                            "Omega": "orthogonalcircle", 
+                                            default: false  >);        
+    elif type eq "SU" then 
+        form := ClassicalForms( sub< GL( dim, q ) | 
+                    [ __funcSymSquareToSLdq( x^(tr^-1) : type := type ) : 
+                            x in GeneratorsSequence( G )] >)`sesquilinearForm;
+        tr_form := TransformForm( form, "unitary" );
+    else 
+        tr_form := One( GL( dim, q ));
+    end if;
+
+    a := map< GL( dim, q ) -> GL( dimg, q ) | 
+         x :-> GL( dimg, q )!__funcSLdqToSymSquare( x^(tr_form^-1) : type := type )^tr >;
+    
+    b := pmap< GL( dimg, q ) -> GL( dim, q ) |
+         x :-> (GL( dim, q )!__funcSymSquareToSLdq( x^(tr^-1) : type := type ))^tr_form >;
+
+    // if CheckResult is set, we perform a check
+    if CheckResult then
+        vprint SymSquareVerbose: "# Checking final result";
+        try
+            gens := [ x@b : x in GeneratorsSequence( G )];
+        catch e 
+            f := Open( "debugfile", "w" );
+            WriteObject( f, G ); print( "G written to file" );
+            delete f;
+            error( "Failed to apply map from G to classical group in dim "*IntegerToString( dim ));
+        end try;
+        M1 := GModule( sub< GL( dimg, q ) | 
+                      [ __funcSLdqToSymSquare( MatrixAlgebra( GF( q ), dim )!(x^(tr_form^-1)) : type := type ) 
+                        : x in gens ]>);
+        if not IsIsomorphic( M1, GModule( G )) then
+	return false, _, _, _;
+        end if;
+        vprint SymSquareVerbose: "# Check passed.";
+    end if;
+    
+    return true, a, b, _;    
 end intrinsic;
 

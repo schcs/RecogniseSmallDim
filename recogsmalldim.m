@@ -43,7 +43,7 @@ RecogniseAltSquareWithSmallDegree := function( G : type := "SL" )
     b := map< GL( dimg, q ) -> GL( d, q ) | 
          x :-> (GL(d,q)!__funcAltSquareToSLdq( x^con : type := type )) >;
 
-    return true, a, b, con;
+    return true, a, b, con^-1;
 end function;
 
 RecogniseSymSquareWithSmallDegree := function( G : type := "SL" )
@@ -79,5 +79,5 @@ RecogniseSymSquareWithSmallDegree := function( G : type := "SL" )
     b := map< GL( dimg, q ) -> GL( d, q ) | 
          x :-> (GL(d,q)!__funcSymSquareToSLdq( x^con : type := type )) >;
 
-    return true, a, b, con;
+    return true, a, b, con^-1;
 end function;

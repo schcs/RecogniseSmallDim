@@ -237,6 +237,22 @@ ConjugateClassicalStandardToSXnq := function( type, dim, q )
 end function;
 
 
+OldFormOmegaMinus := function( d, q )
+
+    F := GF( q );
+
+    oldform := ZeroMatrix( F, d );
+    for i in [1..(d-2) div 2] do
+        oldform[i,d+1-i] := 1;
+        oldform[d+1-i,i] := 1;
+    end for;
+
+    oldform[d div 2,d div 2] := 1;
+    oldform[d div 2+1,d div 2+1] := -Nonsquare( F );
+
+    return oldform;
+end function;
+
 TransformToForm := function( G )
 
     tr := TransformForm( G );
@@ -247,16 +263,7 @@ TransformToForm := function( G )
     d := Dimension( G );
     F := CoefficientRing( G );
 
-    oldform := ZeroMatrix( F, d, d );
-    for i in [1..(d-2) div 2] do
-        oldform[i,d+1-i] := 1;
-        oldform[d+1-i,i] := 1;
-    end for;
-
-    oldform[d div 2,d div 2] := 1;
-    oldform[d div 2+1,d div 2+1] := -Nonsquare( F );
-
-    return tr*TransformForm( oldform, "orthogonalminus" )^-1;
+    return tr*TransformForm( OldFormOmegaMinus( d, #F ), "orthogonalminus" )^-1;
 end function;
     
 

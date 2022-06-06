@@ -14,8 +14,7 @@ import "sp_aux.m": BuildBasis, TestBasis, SpTransformMatrix;
       
 forward RecogniseAltSquareSpFunc;
 
-RecogniseAltSquareSpFunc := function( G : CheckResult := true, 
-                                            Method := "Recursive" )
+RecogniseAltSquareSpFunc := function( G : Method := "Recursive" )
                                                
     cputm := Cputime(); 
     
@@ -205,8 +204,8 @@ RecogniseAltSquareSpFunc := function( G : CheckResult := true,
         aH := sub< GL( dimH, q ) | [ x@ah : x in gensCD ]>;
         aK := sub< GL( dimK, q ) | [ x@ak : x in gensCD ]>;
 
-        vh, b1, c1, bas1 := RecogniseAltSquareSpFunc( aH : CheckResult := false );
-        vk, b2, c2, bas2 := RecogniseAltSquareSpFunc( aK : CheckResult := false );
+        vh, b1, c1, bas1 := RecogniseAltSquareSpFunc( aH );
+        vk, b2, c2, bas2 := RecogniseAltSquareSpFunc( aK );
 
         basH := [ M!(&+[bas1[j][i]*Basis( mH )[i] : 
                     i in [1..dimH]]) : j in [1..dimH]];
@@ -481,26 +480,6 @@ RecogniseAltSquareSpFunc := function( G : CheckResult := true,
    b := pmap< GL( dimg, q ) -> GL( dim, q ) |
         x :-> GL( dim, q )!__funcAltSquareToSLdq( x^(tr^-1) : 
                 type := "Sp" ) >;
-
-   
-   // if CheckResult is set, we perform a check
-   if CheckResult then
-       vprint SymSquareVerbose: "# Checking final result";
-       try
-         gens := [ x@b : x in GeneratorsSequence( G )];
-       catch e
-         error( "calculation of preimages failed" ); 
-       end try;
-       M1 := GModule( sub< GL( dimg, q ) | 
-                     [ __funcSLdqToAltSquare( MatrixAlgebra( GF( q ), dim )!x 
-                             : type := "Sp" ) 
-                       : x in gens ]>);
-       if not IsIsomorphic( M1, GModule( G )) then
-           vprint SymSquareVerbose: "# Check failed.";
-           error( "module isomorphism check failed");
-       end if;
-       vprint SymSquareVerbose: "# Check passed.";
-   end if; 
-    
+ 
    return true, a, b, tr; 
 end function;
