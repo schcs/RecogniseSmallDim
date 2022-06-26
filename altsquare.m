@@ -580,19 +580,19 @@ intrinsic RecogniseAltSquare( G::GrpMat :
             Method := "Recursive" ) 
           -> BoolElt, Map, Map, GrpMatElt
                                                          
- {G should be matrix group conjugate to the alternating square representation
-  of SL( d, q ). Returns true/false, a map from SL( d, q ) to G, a map from 
-  G to SL( d, q ), and a matrix whose rows form a basis that exhibits the 
-  alt square structure. 
+ {Checks if the input group G is isomorphic to a classical group of type <type> over a field of 
+ odd characteristic in its exterior square representation. Returns true or false, a map from the 
+ the standard copy of the classical group in Magma to G, a map from G to the classical group in Magma, 
+ and two matrices X and Y such that the conjugate G^X is equal to the large composition factor of the 
+ exterior square of Y*S*Y^-1 in the standard basis where S is the corresponding classical group in Magma. 
                            
-  Supply CheckResult := true to check the final result.
+ Use the optional argument "CheckResult := true" to check the final result.
                            
-  The basic algorithm is implemented in two variations. The first uses a 
-  recursive call for smaller dimensional alternating square recognition, while
-  the second uses recognition of tensor decomposition with IsTensor. 
-  For SL(d,q) with d=5,6,8 the tensor decomposition version is used while for
-  SL(d,q) with d=7 or d>8 the recursive version is called as default. 
-  This choice can be overwritten by setting UseTensorDecomposition to be true.}                                                
+  The basic algorithm is implemented in two variations. The first uses a recursive call for smaller 
+  dimensional exterior square recognition, while the second uses recognition of tensor decomposition 
+  with IsTensor. In small dimensions (how small depends on the type of the group), the version using 
+  tensor recognition is called, while if the dimension is high enough, then the recussive version is used.
+  This choice can be overwritten by setting <Method> to "Tensor".}                                                
     dimg := Dimension( G );
     dim := SolveAltSquareDimEq( dimg : type := type );        
     q := #CoefficientRing( G );                 
@@ -655,5 +655,5 @@ intrinsic RecogniseAltSquare( G::GrpMat :
         vprint SymSquareVerbose: "# Check passed.";
     end if;
 
-    return true, a, b, _;
+    return true, a, b, tr, tr_form;
 end intrinsic;

@@ -561,10 +561,19 @@ intrinsic RecogniseSymSquare( G::GrpMat : type := "SL",
                                           CheckResult := true ) 
           -> BoolElt, Map, Map, GrpMatElt
                                                          
- {G should be matrix group conjugate to the symmetric square representation
-  of SL( d, q ). Returns true/false, a map from SL( d, q ) to G, a map from 
-  G to SL( d, q ), and a matrix whose rows form a basis that exhibits the 
-  sym square structure. Supply CheckResult := true to check the final result.}                     
+{Checks if the input group G is isomorphic to a classical group of type <type> over a field of 
+ odd characteristic in its symmetric square representation. Returns true or false, a map from the 
+ the standard copy of the classical group in Magma to G, a map from G to the classical group in Magma, 
+ and two matrices X and Y such that the conjugate G^X is equal to the large composition factor of the 
+ symmetric square of Y*S*Y^-1 in the standard basis where S is the corresponding classical group in Magma. 
+                           
+ Use the optional argument "CheckResult := true" to check the final result.
+                           
+  The basic algorithm is implemented in two variations. The first uses a recursive call for smaller 
+  dimensional symmetric square recognition, while the second uses recognition of tensor decomposition 
+  with IsTensor. In small dimensions (how small depends on the type of the group), the version using 
+  tensor recognition is called, while if the dimension is high enough, then the recussive version is used.
+  This choice can be overwritten by setting <Method> to "Tensor".}        
 
     dimg := Dimension( G );
     dim := SolveSymSquareDimEq( dimg : type := type );
@@ -623,6 +632,7 @@ intrinsic RecogniseSymSquare( G::GrpMat : type := "SL",
         vprint SymSquareVerbose: "# Check passed.";
     end if;
     
-    return true, a, b, _;    
+    return true, a, b, tr, tr_form;    
 end intrinsic;
+
 
