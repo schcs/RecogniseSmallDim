@@ -558,7 +558,7 @@ end function;
 
     
 intrinsic RecogniseSymSquare( G::GrpMat : type := "SL", 
-                                          CheckResult := true ) 
+                                          CheckResult := false ) 
           -> BoolElt, Map, Map, GrpMatElt, GrpMatElt
                                                          
 {Checks if the input group G is isomorphic to a classical group of type <type> over a field of 

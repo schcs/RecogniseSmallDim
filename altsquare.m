@@ -576,7 +576,7 @@ end function;
                 
 intrinsic RecogniseAltSquare( G::GrpMat : 
             type := "SL", 
-            CheckResult := true,
+            CheckResult := false,
             Method := "Recursive" ) 
           -> BoolElt, Map, Map, GrpMatElt, GrpMatElt
                                                          
