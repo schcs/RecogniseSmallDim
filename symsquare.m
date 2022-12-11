@@ -559,7 +559,7 @@ end function;
     
 intrinsic RecogniseSymSquare( G::GrpMat : type := "SL", 
                                           CheckResult := true ) 
-          -> BoolElt, Map, Map, GrpMatElt
+          -> BoolElt, Map, Map, GrpMatElt, GrpMatElt
                                                          
 {Checks if the input group G is isomorphic to a classical group of type <type> over a field of 
  odd characteristic in its symmetric square representation. Returns true or false, a map from the 
@@ -572,7 +572,7 @@ intrinsic RecogniseSymSquare( G::GrpMat : type := "SL",
 The basic algorithm is implemented in two variations. The first uses a recursive call for smaller 
 dimensional symmetric square recognition, while the second uses recognition of tensor decomposition 
 with IsTensor. In small dimensions (how small depends on the type of the group), the version using 
-tensor recognition is called, while if the dimension is high enough, then the recussive version is used.
+tensor recognition is called, while if the dimension is high enough, then the recursive version is used.
 This choice can be overwritten by setting <Method> to "Tensor".}        
 
     dimg := Dimension( G );

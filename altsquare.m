@@ -578,7 +578,7 @@ intrinsic RecogniseAltSquare( G::GrpMat :
             type := "SL", 
             CheckResult := true,
             Method := "Recursive" ) 
-          -> BoolElt, Map, Map, GrpMatElt
+          -> BoolElt, Map, Map, GrpMatElt, GrpMatElt
                                                          
  {Checks if the input group G is isomorphic to a classical group of type <type> over a field of 
  odd characteristic in its exterior square representation. Returns true or false, a map from the 
