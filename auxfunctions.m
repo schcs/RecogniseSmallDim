@@ -47,7 +47,7 @@ IsSimilarModMinus1 := function( m1, m2 )
     else
         return false, _;
     end if;
-    
+        
 end function;
     
 // an extension of the previous function to lists of matrices    

@@ -569,11 +569,11 @@ intrinsic RecogniseSymSquare( G::GrpMat : type := "SL",
                            
  Use the optional argument "CheckResult := true" to check the final result.
                            
-  The basic algorithm is implemented in two variations. The first uses a recursive call for smaller 
-  dimensional symmetric square recognition, while the second uses recognition of tensor decomposition 
-  with IsTensor. In small dimensions (how small depends on the type of the group), the version using 
-  tensor recognition is called, while if the dimension is high enough, then the recussive version is used.
-  This choice can be overwritten by setting <Method> to "Tensor".}        
+The basic algorithm is implemented in two variations. The first uses a recursive call for smaller 
+dimensional symmetric square recognition, while the second uses recognition of tensor decomposition 
+with IsTensor. In small dimensions (how small depends on the type of the group), the version using 
+tensor recognition is called, while if the dimension is high enough, then the recussive version is used.
+This choice can be overwritten by setting <Method> to "Tensor".}        
 
     dimg := Dimension( G );
     dim := SolveSymSquareDimEq( dimg : type := type );
@@ -598,9 +598,10 @@ intrinsic RecogniseSymSquare( G::GrpMat : type := "SL",
                                             "Omega": "orthogonalcircle", 
                                             default: false  >);        
     elif type eq "SU" then 
-        form := ClassicalForms( sub< GL( dim, q ) | 
+        v, form := UnitaryForm( sub< GL( dim, q ) | 
                     [ __funcSymSquareToSLdq( x^(tr^-1) : type := type ) : 
-                            x in GeneratorsSequence( G )] >)`sesquilinearForm;
+                            x in GeneratorsSequence( G )] >);
+        assert v;
         tr_form := TransformForm( form, "unitary" );
     else 
         tr_form := One( GL( dim, q ));
@@ -615,14 +616,7 @@ intrinsic RecogniseSymSquare( G::GrpMat : type := "SL",
     // if CheckResult is set, we perform a check
     if CheckResult then
         vprint SymSquareVerbose: "# Checking final result";
-        try
-            gens := [ x@b : x in GeneratorsSequence( G )];
-        catch e 
-            f := Open( "debugfile", "w" );
-            WriteObject( f, G ); print( "G written to file" );
-            delete f;
-            error( "Failed to apply map from G to classical group in dim "*IntegerToString( dim ));
-        end try;
+        gens := [ x@b : x in GeneratorsSequence( G )];
         M1 := GModule( sub< GL( dimg, q ) | 
                       [ __funcSLdqToSymSquare( MatrixAlgebra( GF( q ), dim )!(x^(tr_form^-1)) : type := type ) 
                         : x in gens ]>);

@@ -588,11 +588,11 @@ intrinsic RecogniseAltSquare( G::GrpMat :
                            
  Use the optional argument "CheckResult := true" to check the final result.
                            
-  The basic algorithm is implemented in two variations. The first uses a recursive call for smaller 
-  dimensional exterior square recognition, while the second uses recognition of tensor decomposition 
-  with IsTensor. In small dimensions (how small depends on the type of the group), the version using 
-  tensor recognition is called, while if the dimension is high enough, then the recussive version is used.
-  This choice can be overwritten by setting <Method> to "Tensor".}                                                
+The basic algorithm is implemented in two variations. The first uses a recursive call for smaller 
+dimensional exterior square recognition, while the second uses recognition of tensor decomposition 
+with IsTensor. In small dimensions (how small depends on the type of the group), the version using 
+tensor recognition is called, while if the dimension is high enough, then the recursive version is used.
+This choice can be overwritten by setting <Method> to "Tensor".}                                                
     dimg := Dimension( G );
     dim := SolveAltSquareDimEq( dimg : type := type );        
     q := #CoefficientRing( G );                 
