@@ -8,30 +8,33 @@ The two main functions are RecogniseAltSquare and RecogniseSymSquare.
 intrinsic RecogniseAltSquare( G::GrpMat : 
             type := "SL", 
             CheckResult := true,
-            UseTensorDecomposition := false ) 
-          -> BoolElt, Map, Map, GrpMatElt
+            Method := "Recursive" ) 
+          -> BoolElt, Map, Map, GrpMatElt, GrpMatElt
                                                          
 G should be matrix group conjugate to the exterior square representation
 of SL( d, q ). Returns true/false, a map from SL( d, q ) to G, a map from 
 G to SL( d, q ), and a matrix whose rows form a basis that exhibits the 
-alt square structure. 
+alt square structure. The last piece of output can be used to conjugate 
+the image of G under the second map into the standard copy of the classical 
+group in Magma.
                            
 Supply CheckResult := true to check the final result.
                            
-The basic algorithm is implemented in two variations. The first uses a 
-recursive call for smaller dimensional alternating square recognition, while
-the second uses recognition of tensor decomposition with IsTensor. 
-For SL(d,q) with d=5,6,8 the tensor decomposition version is used while for
-SL(d,q) with d=7 or d>8 the recursive version is called as default. 
-This choice can be overwritten by setting UseTensorDecomposition to be true.
+he basic algorithm is implemented in two variations. The first uses a recursive call for smaller 
+dimensional exterior square recognition, while the second uses recognition of tensor decomposition 
+with IsTensor. In small dimensions (how small depends on the type of the group), the version using 
+tensor recognition is called, while if the dimension is high enough, then the recursive version is used.
+This choice can be overwritten by setting <Method> to "Tensor".
   
 intrinsic RecogniseSymSquare( G::GrpMat : type := "SL", CheckResult := false ) 
-          -> BoolElt, Map, Map, GrpMatElt
+          -> BoolElt, Map, Map, GrpMatElt, GrpMatElt
                                                          
 G should be matrix group conjugate to the symmetric square representation
 of SL( d, q ). Returns true/false, a map from SL( d, q ) to G, a map from 
 G to SL( d, q ), and a matrix whose rows form a basis that exhibits the 
-sym square structure. 
+sym square structure. The last piece of output can be used to conjugate 
+the image of G under the second map into the standard copy of the classical 
+group in Magma.
 
 Supply CheckResult := true to check the final result.
 
