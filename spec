@@ -1,6 +1,7 @@
 auxfunctions.m
 greenhill.m
 smalldimreps.m
+definitions.m
 symsquare_omega_aux.m
 symsquare_omega.m
 symsquare.m

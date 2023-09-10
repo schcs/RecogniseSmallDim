@@ -452,6 +452,7 @@ __funcSymSquareToSLdq := function( g : type := "SL", ww := 1/2 )
         A[1,i] := GF(q)!0;
     end for;
     
+    if not IsSquare( g[1,listii[i0]] ) then return false; end if;
     A[1,i0] := Sqrt( g[1,listii[i0]] );
     
     for i in [1..dim-i0] do

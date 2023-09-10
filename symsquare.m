@@ -19,6 +19,7 @@ import "auxfunctions.m": MyDerivedGroupMonteCarlo;
 import "symsquare_omega.m":RecogniseSymSquareOmegaFunc;
 import "symsquare_omega_aux.m":AssignBasisFromComponents, BuildBasisOmega;
 import "recogsmalldim.m":RecogniseSymSquareWithSmallDegree;
+import "definitions.m": altsymsquareinforf;
 
 AddAttribute( GrpMat, "BasisMatrixFromComponents" );
 
@@ -559,7 +560,7 @@ end function;
     
 intrinsic RecogniseSymSquare( G::GrpMat : type := "SL", 
                                           CheckResult := false ) 
-          -> BoolElt, Map, Map, GrpMatElt, GrpMatElt
+          -> BoolElt, Map, Map, GrpMatElt
                                                          
 {Checks if the input group G is isomorphic to a classical group of type <type> over a field of 
  odd characteristic in its symmetric square representation. Returns true or false, a map from the 
@@ -577,7 +578,8 @@ This choice can be overwritten by setting <Method> to "Tensor".}
 
     dimg := Dimension( G );
     dim := SolveSymSquareDimEq( dimg : type := type );
-    q := #CoefficientRing( G );     
+    q := #CoefficientRing( G );   
+    q0 := case< type | "SU": Integers()!( Sqrt( q )), default: q >;  
 
     if not IsValidParameterSetForSymSquare( type, dim, q ) then 
         error( "not valid paramenters for symmetric square recognition" );
@@ -607,6 +609,9 @@ This choice can be overwritten by setting <Method> to "Tensor".}
         tr_form := One( GL( dim, q ));
     end if;
 
+    tr_form_sym := __funcSLdqToSymSquare( tr_form : type := type )^0;
+    tr := GL( dimg, q )!(tr_form_sym^-1*tr);
+
     a := map< GL( dim, q ) -> GL( dimg, q ) | 
          x :-> GL( dimg, q )!__funcSLdqToSymSquare( x^(tr_form^-1) : type := type )^tr >;
     
@@ -614,6 +619,18 @@ This choice can be overwritten by setting <Method> to "Tensor".}
          x :-> (GL( dim, q )!__funcSymSquareToSLdq( x^(tr^-1) : type := type ))^tr_form >;
 
     // if CheckResult is set, we perform a check
+
+    recog_rec := rec< altsymsquareinforf | 
+                      Type := type, 
+                      NatDim := dim, 
+                      NatField := q0, 
+                      phi_map := a, 
+                      tau_map := b, 
+                      tr_matrix_outer := tr, 
+                      tr_matrix_inner := tr_form >; 
+
+    G`AltSymSquareInfo := recog_rec;
+
     if CheckResult then
         vprint SymSquareVerbose: "# Checking final result";
         gens := [ x@b : x in GeneratorsSequence( G )];
@@ -626,7 +643,7 @@ This choice can be overwritten by setting <Method> to "Tensor".}
         vprint SymSquareVerbose: "# Check passed.";
     end if;
     
-    return true, a, b, tr, tr_form;    
+    return true, a, b, tr^-1;    
 end intrinsic;
 
 

@@ -578,7 +578,7 @@ intrinsic RecogniseAltSquare( G::GrpMat :
             type := "SL", 
             CheckResult := false,
             Method := "Recursive" ) 
-          -> BoolElt, Map, Map, GrpMatElt, GrpMatElt
+          -> BoolElt, Map, Map, GrpMatElt
                                                          
  {Checks if the input group G is isomorphic to a classical group of type <type> over a field of 
  odd characteristic in its exterior square representation. Returns true or false, a map from the 
@@ -614,6 +614,15 @@ This choice can be overwritten by setting <Method> to "Tensor".}
                               Method := Method );  
     assert v;
 
+    /* The matrix tr will conjugate G into a subgroup of AltSquare( SL( dim, q )). If the original G 
+       is the image of a classical group, we want to further conjugate it into the image of the 
+       standard classical group in Magma, such as Sp(dim,q), SU(dim,q), etc. 
+
+       This is achieved with the tr_form matrix. 
+
+       First we check the classical form that is preserved by the preimage of G in SL(dim,q) and 
+       we compute the matrix that transforms this form into the standard form of Magma. */
+
     if type in { "Omega+", "Omega-", "Omega" } then 
         form := ClassicalForms( sub< GL( dim, q ) | 
                     [ __funcAltSquareToSLdq( x^(tr^-1) : type := type ) : 
@@ -630,12 +639,29 @@ This choice can be overwritten by setting <Method> to "Tensor".}
     else 
         tr_form := One( GL( dim, q ));
     end if;
+
+    /* Now we compute the image of tr_form_alt in the exterior square and modify the transformation matrix 
+       tr */
+
+    tr_form_alt := __funcSLdqToAltSquare( tr_form : type := type );
+    tr := GL( dimg, q )!(tr_form_alt^-1*tr);
+    
+    /* This was the code before when two matrices (tr and tr_form) were returned 
     
     a := map< GL( dim, q ) -> GL( dimg, q ) | 
          x :-> GL( dimg, q )!__funcSLdqToAltSquare( x^(tr_form^-1) : type := type )^tr >;
     
     b := pmap< GL( dimg, q ) -> GL( dim, q ) |
          x :-> (GL( dim, q )!__funcAltSquareToSLdq( x^(tr^-1) : type := type ))^tr_form >;
+
+    */
+
+    a := map< GL( dim, q ) -> GL( dimg, q ) | 
+         x :-> GL( dimg, q )!__funcSLdqToAltSquare( x : type := type )^tr >;
+    
+    b := pmap< GL( dimg, q ) -> GL( dim, q ) |
+         x :-> (GL( dim, q )!__funcAltSquareToSLdq( x^(tr^-1) : type := type )) >;
+
 
     // if CheckResult is set, we perform a check
     if CheckResult then
@@ -655,5 +681,5 @@ This choice can be overwritten by setting <Method> to "Tensor".}
         vprint SymSquareVerbose: "# Check passed.";
     end if;
 
-    return true, a, b, tr, tr_form;
+    return true, a, b, tr^-1;
 end intrinsic;
