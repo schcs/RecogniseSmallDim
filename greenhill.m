@@ -27,7 +27,7 @@ __funcAltSquareToSLdq_findpivot := function( Y )
     codim := case< dimX mod Characteristic( F ) | 0: 2, default: 1 >;
     
     if dimX eq 0 then 
-        return false;
+        return false, _, _, _, _, _, _;
     end if;
         
     /* a function that returns the entry of Y that corresponds to 
@@ -65,7 +65,7 @@ __funcAltSquareToSLdq_findpivot := function( Y )
             for k in [1..alpha-1] do
                 for l in [k+1..alpha-1] do
                     if p ne j and Y_( p, j, k, l ) ne 0 then
-                        return false, 1;
+                        return false, 1, _, _, _, _, _;
                     end if;
                 end for;
             end for;
@@ -77,7 +77,7 @@ __funcAltSquareToSLdq_findpivot := function( Y )
             for j in [p+1..dimX] do
                 for k in [1..l-2] do
                     if Y_( p, j, k, l-1 ) ne 0 then 
-                        return false, 2;
+                        return false, 2, _, _, _, _, _;;
                     end if;
                 end for;
             end for;
@@ -127,8 +127,8 @@ __funcAltSquareToSLdq_findpivot := function( Y )
                         end if;
                         
                     end if;
-                    if z eq 0 then return false, 1, l; end if;
-                    try w := Sqrt( z ); catch e return false, 2, l; end try;
+                    if z eq 0 then return false, 1, l, _, _, _, _; end if;
+                    try w := Sqrt( z ); catch e return false, 2, l, _, _, _, _; end try;
                     return p, q, l, mu, x, y, w;
                 end if;
             end if;
@@ -149,7 +149,7 @@ __funcAltSquareToSLdq_func := function( Y : chardivdim := false )
        the pivot in X is X[p,l]. */
       
     p, q, l, mu, x, y, w := __funcAltSquareToSLdq_findpivot( Y );
-
+    if Type( p ) eq BoolElt then return false, false; end if; 
     // start setting up the output matrix Z
     Z := ZeroMatrix( F, m );
     Z[p,l] := w^-1;

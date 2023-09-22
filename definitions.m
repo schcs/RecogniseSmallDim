@@ -84,10 +84,12 @@ AltSymPreimage := function( G, x )
                                  default: false >;
     
     y := rep_func( x^(tr_outer^-1) : type := type );
+    
     if Type( y ) eq BoolElt then 
         return false, _;
     end if;
     
+    if Determinant( y ) eq 0 then return false, _; end if;
     y := GL( n0, CoefficientRing( y ))!y^tr_inner;
     
     // check if y is in the natural group
