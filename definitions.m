@@ -85,7 +85,7 @@ AltSymPreimage := function( G, x )
     
     y := rep_func( x^(tr_outer^-1) : type := type );
     if Type( y ) eq BoolElt then 
-        return false, _, 1;
+        return false, _;
     end if;
     
     y := GL( n0, CoefficientRing( y ))!y^tr_inner;
