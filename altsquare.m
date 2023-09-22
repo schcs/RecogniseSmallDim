@@ -9,6 +9,8 @@ import "altsquare_sp.m": RecogniseAltSquareSpFunc;
 
 import "recogsmalldim.m":RecogniseAltSquareWithSmallDegree;
 
+import "definitions.m":altsymsquareinforf;
+
 // checks if RecogniseSymSquare works for a given set of paramenters
 IsValidParameterSetForAltSquare := function( type, dim, q )
     
@@ -592,11 +594,17 @@ The basic algorithm is implemented in two variations. The first uses a recursive
 dimensional exterior square recognition, while the second uses recognition of tensor decomposition 
 with IsTensor. In small dimensions (how small depends on the type of the group), the version using 
 tensor recognition is called, while if the dimension is high enough, then the recursive version is used.
-This choice can be overwritten by setting <Method> to "Tensor".}                                                
+This choice can be overwritten by setting <Method> to "Tensor".}    
+
+    if assigned G`AltSymSquareInfo then 
+        return true, G`AltSymSquareInfo`phi_map, G`AltSymSquareInfo`tau_map, G`AltSymSquareInfo`tr_matrix_outer;
+    end if; 
+
     dimg := Dimension( G );
     dim := SolveAltSquareDimEq( dimg : type := type );        
-    q := #CoefficientRing( G );                 
+    q := #CoefficientRing( G );
     _, p := IsPrimePower( q );
+    q0 := case< type | "SU": Integers()!( Sqrt( q )), default: q >;        
     
     error if p eq 2, 
         "the field cannot have characteristic 2";
@@ -662,6 +670,17 @@ This choice can be overwritten by setting <Method> to "Tensor".}
     b := pmap< GL( dimg, q ) -> GL( dim, q ) |
          x :-> (GL( dim, q )!__funcAltSquareToSLdq( x^(tr^-1) : type := type )) >;
 
+    recog_rec := rec< altsymsquareinforf | 
+                      Type := type, 
+                      RepType := "AltSquare",
+                      NatDim := dim, 
+                      NatField := q0, 
+                      phi_map := a, 
+                      tau_map := b, 
+                      tr_matrix_outer := tr, 
+                      tr_matrix_inner := One( GL( dim, q )) >; 
+
+    G`AltSymSquareInfo := recog_rec;
 
     // if CheckResult is set, we perform a check
     if CheckResult then

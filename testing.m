@@ -1,3 +1,4 @@
+
 SymSquare := function( type, n, q : twist := false )
 
   if type eq "SL" then
@@ -110,6 +111,51 @@ TestSymSquare := function(type, d, q : NrTries := 100 )
     return true;
 end function;
     
+TestSymSquare_new := function(type, d, q : NrTries := 100 )
+    
+    if d ge 20 and NrTries gt 20 then NrTries := 20; end if;
+    
+    type0 := case< type | "GL": "SL", "GU": "SU", "SO+": "Omega+", 
+                         "GO+": "Omega+", "SO-": "Omega-", "GO-": "Omega-", 
+                         "SO": "Omega", "GO": "Omega", default: type >;
+
+    for i in [1..NrTries] do
+        G := SymSquare( type, d, q : twist := true );
+        v, a, b, bas := RecogniseSymSquare( G : type := type0, CheckResult := true );
+        for k in [1..100] do 
+            x := Random( G );
+            v, y := AltSymPreimage( G, x ); assert v;
+            v, x1 := AltSymImage( G, y ); assert v;
+            if x*x1^-1 ne x^0 then return false; end if;
+        end for; 
+    end for;
+    
+    return true;
+end function;
+
+TestAltSquare_new := function(type, d, q : NrTries := 100 )
+    
+    if d ge 20 and NrTries gt 20 then NrTries := 20; end if;
+    
+    type0 := case< type | "GL": "SL", "GU": "SU", "SO+": "Omega+", 
+                         "GO+": "Omega+", "SO-": "Omega-", "GO-": "Omega-", 
+                         "SO": "Omega", "GO": "Omega", default: type >;
+
+    for i in [1..NrTries] do
+        G := AltSquare( type, d, q : twist := true );
+        v, a, b, bas := RecogniseAltSquare( G : type := type0, CheckResult := true );
+        for k in [1..100] do 
+            x := Random( G );
+            v, y := AltSymPreimage( G, x ); assert v;
+            v, x1 := AltSymImage( G, y ); assert v;
+            if x*x1^-1 ne x^0 then return false; end if;
+        end for; 
+    end for;
+    
+    return true;
+end function;
+
+
 TestSymSquare2 := function( type, limd, limq, nr )
     
     vb := GetVerbose( "SymSquareVerbose" );

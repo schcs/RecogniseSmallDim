@@ -574,7 +574,11 @@ The basic algorithm is implemented in two variations. The first uses a recursive
 dimensional symmetric square recognition, while the second uses recognition of tensor decomposition 
 with IsTensor. In small dimensions (how small depends on the type of the group), the version using 
 tensor recognition is called, while if the dimension is high enough, then the recursive version is used.
-This choice can be overwritten by setting <Method> to "Tensor".}        
+This choice can be overwritten by setting <Method> to "Tensor".}      
+
+    if assigned G`AltSymSquareInfo then 
+        return true, G`AltSymSquareInfo`phi_map, G`AltSymSquareInfo`tau_map, G`AltSymSquareInfo`tr_matrix_outer;
+    end if; 
 
     dimg := Dimension( G );
     dim := SolveSymSquareDimEq( dimg : type := type );
@@ -622,6 +626,7 @@ This choice can be overwritten by setting <Method> to "Tensor".}
 
     recog_rec := rec< altsymsquareinforf | 
                       Type := type, 
+                      RepType := "SymSquare",
                       NatDim := dim, 
                       NatField := q0, 
                       phi_map := a, 

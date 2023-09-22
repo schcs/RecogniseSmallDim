@@ -1,8 +1,10 @@
-// 
-import "smalldimreps.m":__funcSLdqToSymSquare, __funcSymSquareToSLdq;
+import "smalldimreps.m":__funcSLdqToSymSquare, __funcSymSquareToSLdq, 
+                        __funcSLdqToAltSquare, __funcAltSquareToSLdq;
 
-AddAttribute( GrpMat, "AltSymSquareInfo" );
-altsymsquareinforf := recformat< Type: MonStgElt, 
+declare attributes GrpMat: AltSymSquareInfo;
+
+altsymsquareinforf := recformat<    Type: MonStgElt, 
+                                    RepType: MonStgElt,
                                     NatDim: RngIntElt,
                                     NatField: RngIntElt,
                                     phi_map: Map, 
@@ -22,8 +24,10 @@ AltSymImage := function( G, x )
     F0 := G`AltSymSquareInfo`NatField;
     tr_inner := G`AltSymSquareInfo`tr_matrix_inner;
     tr_outer := G`AltSymSquareInfo`tr_matrix_outer;
+    rep_type := G`AltSymSquareInfo`RepType;
+    type := G`AltSymSquareInfo`Type;
 
-    grp_nat := case< G`AltSymSquareInfo`Type | 
+    grp_nat := case< type | 
                      "SL": SL( n0, F0 ), 
                      "Sp": Sp( n0, F0 ),
                      "SU": SU( n0, F0 ),
@@ -35,15 +39,20 @@ AltSymImage := function( G, x )
     assert not Type( grp_nat ) eq BoolElt;
 
     if not x in grp_nat then 
-        return false;
+        return false, _;
     end if; 
 
-    y := __funcSLdqToSymSquare( x^(tr_inner^-1) )^tr_outer;
+    rep_func := case< rep_type | "SymSquare": __funcSLdqToSymSquare, "AltSquare": __funcSLdqToAltSquare, 
+                                 default: false >;
+
+    y := rep_func( x^(tr_inner^-1) : type := type );
     if Type( y ) eq BoolElt then 
-        return false;
+        return false, _;
     end if; 
     
-    return y;
+    y := (GL( NumberOfRows( y ), CoefficientRing( y ))!y)^tr_outer;
+    
+    return true, y;
 end function;
 
 
@@ -57,8 +66,10 @@ AltSymPreimage := function( G, x )
     F0 := G`AltSymSquareInfo`NatField;
     tr_inner := G`AltSymSquareInfo`tr_matrix_inner;
     tr_outer := G`AltSymSquareInfo`tr_matrix_outer;
+    rep_type := G`AltSymSquareInfo`RepType;
+    type := G`AltSymSquareInfo`Type;
 
-    grp_nat := case< G`AltSymSquareInfo`Type | 
+    grp_nat := case< type | 
                      "SL": SL( n0, F0 ), 
                      "Sp": Sp( n0, F0 ),
                      "SU": SU( n0, F0 ),
@@ -69,16 +80,24 @@ AltSymPreimage := function( G, x )
     
     assert not Type( grp_nat ) eq BoolElt;
 
-    y := __funcSymSquareToSLdq( x^(tr_outer^-1) );
-    if Type( y ) eq BoolElt then 
-        return false;
-    end if;
-
-    y := GL( n0, CoefficientRing( y ))!y^tr_inner;
-
-    if not y in grp_nat then 
-        return false;
-    end if; 
+    rep_func := case< rep_type | "SymSquare": __funcSymSquareToSLdq, "AltSquare": __funcAltSquareToSLdq, 
+                                 default: false >;
     
-    return y;
+    y := rep_func( x^(tr_outer^-1) : type := type );
+    if Type( y ) eq BoolElt then 
+        return false, _, 1;
+    end if;
+    
+    y := GL( n0, CoefficientRing( y ))!y^tr_inner;
+    
+    // check if y is in the natural group
+    // in the case of Omega groups, y may not have the right spinor norm, 
+    // in this case, -y is the right element    
+    if y in grp_nat then 
+        return true, y;
+    elif -y in grp_nat then 
+        return true, GL( n0, CoefficientRing( y ))!(-y);
+    end if; 
+
+    return false, _;
 end function;
