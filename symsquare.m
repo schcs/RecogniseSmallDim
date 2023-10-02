@@ -613,8 +613,8 @@ This choice can be overwritten by setting <Method> to "Tensor".}
         tr_form := One( GL( dim, q ));
     end if;
 
-    tr_form_sym := __funcSLdqToSymSquare( tr_form : type := type )^0;
-    tr := GL( dimg, q )!(tr_form_sym^-1*tr);
+    //tr_form_sym := __funcSLdqToSymSquare( tr_form : type := type )^0;
+    //tr := GL( dimg, q )!(tr_form_sym^-1*tr);
 
     a := map< GL( dim, q ) -> GL( dimg, q ) | 
          x :-> GL( dimg, q )!__funcSLdqToSymSquare( x^(tr_form^-1) : type := type )^tr >;
