@@ -448,6 +448,7 @@ __funcSymSquareToSLdq := function( g : type := "SL", ww := 1/2 )
     
     //recover the first row
     i0 := Position( [ g[1,x] ne 0 : x in listii ], true ); 
+    if i0 eq 0 then return false; end if;
     for i in [1..i0-1] do
         A[1,i] := GF(q)!0;
     end for;
