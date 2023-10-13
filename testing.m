@@ -160,7 +160,8 @@ TestSymSquare2 := function( type, limd, limq, nr )
     
     vb := GetVerbose( "SymSquareVerbose" );
     SetVerbose( "SymSquareVerbose", 0 );
-    
+
+
     ranged := case< type | "SL": [2..limd], "GL": [3..limd], 
               "SU": [3..limd], "GU": [3..limd],
               "Sp": [4..limd by 2], 
@@ -169,6 +170,11 @@ TestSymSquare2 := function( type, limd, limq, nr )
               "Omega": [9..limd by 2],   "GO": [9..limd by 2], "SO": [9..limd by 2],
               default: [3..limd]  >;
 
+
+    ranged := case< type | "Sp": [2..limd by 2], "Omega+": [2..limd by 2], "Omega-": [2..limd by 2],
+                           "Omega": [3..limd by 2], default: [2..limd] >;
+
+    
     exc := [ <"Sp", 6, 3>, <"Sp", 9, 3 >, <"SU", 6, 7 >, <"Sp", 10, 3 >,
             <"GO+",10,3>,<"SO+",10,3>,<"Omega+",10,3>,<"GO+",10,9>,
             <"SO+",10,9>,<"GO+",10,27>,<"SO+",10,27>,
@@ -177,10 +183,13 @@ TestSymSquare2 := function( type, limd, limq, nr )
             <"SO-",10,3>,
             <"GO",9,5>,<"GO",9,25>,
             <"SO",9,5>,<"SO",9,25>];
-    qs := [ x : x in [3..limq] | IsPrimePower( x ) and IsOdd( x )];
+
+    exc = [];
+
+    qs := [ x : x in [3..limq] | IsPrimePower( x )];
     for d in ranged do
         for q in qs do
-            if <type,d,q> in exc then 
+            if not IsNewCodeApplicable( "Sym", type, d, q ) then 
                 print d, q, "skipped";
                 continue;
             end if;
@@ -229,11 +238,15 @@ TestAltSquare2 := function( type, limd, limq, nr :
               "Omega": [9..limd by 2], "GO": [9..limd by 2], "SO": [9..limd by 2],
               default: [3..limd]  >;
     
-    qs := [ x : x in [3..limq] | IsPrimePower( x ) and IsOdd( x )];
-    exc := [ <"Sp", 10, 3>, <"Sp", 10, 9 >, <"Sp",10,27> ];
+    ranged := case< type | "Sp": [4..limd by 2], "Omega+": [4..limd by 2], "Omega-": [4..limd by 2],
+                           "Omega": [3..limd by 2], default: [3..limd] >;
+
+    qs := [ x : x in [3..limq] | IsPrimePower( x )];
+    exc := []; //[ <"Sp", 10, 3>, <"Sp", 10, 9 >, <"Sp",10,27> ];
     for d in ranged do
         for q in qs do
-            if <type,d,q> in exc then print "skipping", <type,d,q>;
+            if not IsNewCodeApplicable( "Alt", type,d,q ) then 
+                print "skipping", <type,d,q>;
                 continue;
             end if;
 	        print d, q, ":", TestAltSquare( type, d, q : NrTries := nr,

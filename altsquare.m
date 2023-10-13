@@ -118,6 +118,7 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
     vprint SymSquareVerbose: "# Recog AltSquare dim", dim, 
             "type", type, "method", Method ;
 
+    /*
     if type eq "SL" and dim in {5,6} then 
         return RecogniseAltSquareWithSmallDegree( G : type := type );
     elif type eq "SU" and dim in {5, 6} then 
@@ -131,7 +132,8 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
     elif type eq "Omega" and dim eq 9 and p eq 3 then
         return RecogniseAltSquareWithSmallDegree( G : type := type );
     end if; 
-
+    */
+    
     if type eq "Sp" then
       return RecogniseAltSquareSpFunc( G : Method := Method );
     end if;

@@ -103,3 +103,46 @@ AltSymPreimage := function( G, x )
 
     return false, _;
 end function;
+
+/* the following returns true/false depending on whether the methods in the package are applicable for 
+   the particular problem.
+
+   reptype: "Alt" or "Sym"
+   type: "SL", "Sp", "SU", "Omega", "Omega+", or "Omega-"
+   dim: integer
+   q: prime-power
+
+   */
+
+ IsNewCodeApplicable := function( reptype, type, dim, q )
+
+    _, p := IsPrimePower( q );
+    if p eq 2 then return false; end if;
+
+    if reptype eq "Sym" then 
+        
+        if type in {"SL","Sp","SU" } and dim lt 2 then return false;
+        elif <type,dim,q> eq <"Omega+",10,3> then return false; 
+        elif <type,dim,q> eq <"Omega-",10,3> then return false; 
+        elif type eq "Omega+" and dim lt 10 then return false; 
+        elif <type,dim,p> eq <"Omega+",10,3> then return false;
+        elif type eq "Omega-" and dim lt 8 then return false;
+        elif <type,dim,p> eq <"Omega-",10,3> then return false; 
+        elif type eq "Omega" and dim lt 9 then return false;
+        elif <type,dim,p> eq <"Omega",9,5> then return false; end if;
+
+    elif reptype eq "Alt" then 
+    
+        if type eq "SL" and dim in {5,6} then return false;
+        elif type eq "SU" and dim in {5,6} then return false;
+        elif type eq "Sp" and dim lt 8 then return false;
+        elif <type,dim,p> eq <"Sp",10,3> then return false;
+        elif type eq "Omega+" and dim lt 12 then return false;  
+        elif type eq "Omega-" and dim lt 12 then return false; 
+        elif type eq "Omega" and dim lt 9 then return false; 
+        elif <type,dim,q> eq <"Omega",9,3> then return false; end if; 
+    
+    end if; 
+
+    return true;
+end function;

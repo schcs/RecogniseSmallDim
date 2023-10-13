@@ -245,6 +245,7 @@ RecogniseSymSquareFunc := function( G : type := "SL", IsRecursiveCall := false )
       when 3: return RecogniseSymSquareDim3( G : type := type );
     end case;
 
+    /* 
     if <type,dim,p> eq <"Omega",9,5> then 
         return  RecogniseSymSquareWithSmallDegree( G : type := type );
     elif <type,dim,p> eq <"Omega+",10,3> then 
@@ -254,7 +255,8 @@ RecogniseSymSquareFunc := function( G : type := "SL", IsRecursiveCall := false )
     elif type eq "Omega" and dim lt 9 then
         return  RecogniseSymSquareWithSmallDegree( G : type := type );
     end if;
-
+    */
+    
     // For Omega groups we call other function 
 
     if type in { "Omega+", "Omega-", "Omega" } then 
