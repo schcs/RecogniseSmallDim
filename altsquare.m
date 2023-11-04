@@ -574,7 +574,7 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
     
     vprint SymSquareVerbose: "# Recog AltSquare dim", dim, "took ", 
       Cputime()-cputm;
-            
+      
     return true, a, b, tr;
 end function;
                 

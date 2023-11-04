@@ -5,7 +5,7 @@ import "smalldimreps.m":__funcSLdqToSymSquare, __funcSymSquareToSLdq,
 SolveSymSquareDimEq, funcpos_symsquare, funcposinv_symsquare, BasisMatrixForSymSquareOmega;
 
 import "auxfunctions.m": MyDerivedGroupMonteCarlo, IsSimilarToScalarMultiple, 
-    SplitTensor, IsSimilarModScalar, TransformToForm, OldFormOmegaMinus;
+    SplitTensor, IsSimilarModScalar, TransformToForm, OldFormOmegaMinus, ScalarOfPreservedForm;
 
 import "symsquare_omega_aux.m":TestBasisOmega, OmegaBasisFromComponents, 
     BuildBasisOmega, TypeOfSymSquareOmega, SymSquareOmegaBasisWithOmegaMinus, 
@@ -418,15 +418,26 @@ RecogniseSymSquareOmegaFunc := function( G :
 
         g1h := sub< Universe( gens1h ) | gens1h >; 
         g1k := sub< Universe( gens1k ) | gens1k >;
+        
         formh := ClassicalForms( g1h : Scalars := true );
         formk := ClassicalForms( g1k : Scalars := true );
 
         sch := formh`scalars;
-        sck := formk`scalars;
+        sck := formk`scalars;        
+
+        if #sch ne #gens1h then 
+            sch := [ ScalarOfPreservedForm( x, formh`bilinearForm ) : x in gens1h ];
+        end if;
+
+        if #sck ne #gens1k then 
+            sck := [ ScalarOfPreservedForm( x, formk`bilinearForm ) : x in gens1k ];
+        end if;
+
 
         /* it might happen that an elment of gens1k or gens1h is the identity. 
         in this case, the corresponding scalar 1 will be mssing from sck and/or sch */
 
+        /*
         if #sch lt #gens1h then
             gens1h_ := GeneratorsSequence( g1h );
             Append( ~gens1h_, gens1h_[1]^0 );
@@ -440,7 +451,8 @@ RecogniseSymSquareOmegaFunc := function( G :
             Append( ~sck, 1 );
             sch := [ sck[Position( gens1k_, gens1k[x] )] : x in [1..#gens1k]];
         end if;
-
+        */
+        
         typeh := case< formh`formType | "orthogonalplus": "Omega+", 
                         "orthogonalminus": "Omega-", 
                         "orthogonalcircle": "Omega",  

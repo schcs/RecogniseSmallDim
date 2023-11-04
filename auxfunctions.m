@@ -182,5 +182,22 @@ TransformToForm := function( G )
 
     return tr*TransformForm( OldFormOmegaMinus( d, #F ), "orthogonalminus" )^-1;
 end function;
+
+
+// mat preserves the form mod scalar
+// returns this schalar
+
+ScalarOfPreservedForm := function( mat, form )
+
+    i := 1;
+    while form[1,i] eq 0 do 
+        i +:= 1;
+    end while; 
+
+    // form[1,i] is non-zero
+
+    form1 := mat*form*Transpose( mat );
+    return form1[1,i]*form[1,i]^-1;
+end function;
     
 

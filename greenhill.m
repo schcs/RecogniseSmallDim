@@ -297,6 +297,6 @@ __funcAltSquareToSLdq_func := function( Y : chardivdim := false )
             R[j,s] := true;
         end for;
     end for;
-                          
+
     return Z, R;
 end function;
