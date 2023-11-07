@@ -251,8 +251,7 @@ TestAltSquare2 := function( type, limd, limq, nr :
                 print "skipping", <type,d,q>;
                 continue;
             end if;
-	        print d, q, ":", TestAltSquare_new( type, d, q : NrTries := nr,
-			 Method := Method );
+	        print d, q, ":", TestAltSquare_new( type, d, q : NrTries := nr );
         end for;
     end for;
     
