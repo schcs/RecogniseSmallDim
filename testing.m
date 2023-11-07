@@ -1,4 +1,6 @@
 
+import "definitions.m":AltSymImage, AltSymPreimage;
+
 SymSquare := function( type, n, q : twist := false )
 
   if type eq "SL" then
@@ -184,7 +186,7 @@ TestSymSquare2 := function( type, limd, limq, nr )
             <"GO",9,5>,<"GO",9,25>,
             <"SO",9,5>,<"SO",9,25>];
 
-    exc = [];
+    exc := [];
 
     qs := [ x : x in [3..limq] | IsPrimePower( x )];
     for d in ranged do
