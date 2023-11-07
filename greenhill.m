@@ -15,7 +15,7 @@
 
 
 import "smalldimreps.m":SolveAltSquareDimEq, funcpos_altsquare, 
-                        funcposinv_altsquare;
+                        funcposinv_altsquare, __funcSLdqToAltSquare;
                    
 __funcAltSquareToSLdq_findpivot := function( Y )
     
@@ -77,6 +77,7 @@ __funcAltSquareToSLdq_findpivot := function( Y )
             for j in [p+1..dimX] do
                 for k in [1..l-2] do
                     if Y_( p, j, k, l-1 ) ne 0 then 
+                        print l, j, k;
                         return false, 2, _, _, _, _, _;;
                     end if;
                 end for;
@@ -297,6 +298,8 @@ __funcAltSquareToSLdq_func := function( Y : chardivdim := false )
             R[j,s] := true;
         end for;
     end for;
+
+    if __funcSLdqToAltSquare( Z ) ne Y then return false, false; end if;
 
     return Z, R;
 end function;
