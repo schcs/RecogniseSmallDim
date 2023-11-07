@@ -632,7 +632,7 @@ end function;
     
 /* wrapping function for Greenhill's algorithm */
 
-__funcAltSquareToSLdq := function( Y : type := "SL" )
+__funcAltSquareToSLdq := function( Y : type := "SL", Check := true )
     
     // find the dimensions of Y and the original matrix X
     
@@ -648,7 +648,7 @@ __funcAltSquareToSLdq := function( Y : type := "SL" )
     // if the type is Sp, then we recover the original Y from Y
 
     if type ne "Sp" then
-        return __funcAltSquareToSLdq_func( Y );
+        return __funcAltSquareToSLdq_func( Y : Check := Check );
     end if; 
 
     // type is Sp
@@ -671,7 +671,7 @@ __funcAltSquareToSLdq := function( Y : type := "SL" )
         conj := BasisMatrixForAltSquareSp( dimX, F );
         YY0 := conj^-1*newYY*conj;
         try 
-            X := __funcAltSquareToSLdq_func( YY0 : chardivdim := codim eq 2 );
+            X := __funcAltSquareToSLdq_func( YY0 : chardivdim := codim eq 2, Check := false );
         catch e
             X := false;
         end try;

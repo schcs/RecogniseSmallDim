@@ -137,7 +137,7 @@ __funcAltSquareToSLdq_findpivot := function( Y )
     end for;
 end function;
     
-__funcAltSquareToSLdq_func := function( Y : chardivdim := false )
+__funcAltSquareToSLdq_func := function( Y : chardivdim := false, Check := false )
      
     // get the dimensions and the coeff ring
     
@@ -299,7 +299,7 @@ __funcAltSquareToSLdq_func := function( Y : chardivdim := false )
         end for;
     end for;
 
-    if __funcSLdqToAltSquare( Z ) ne Y then return false, false; end if;
+    if Check and __funcSLdqToAltSquare( Z ) ne Y then return false, false; end if;
 
     return Z, R;
 end function;
