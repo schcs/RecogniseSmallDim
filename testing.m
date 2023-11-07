@@ -1,5 +1,5 @@
 
-import "definitions.m":AltSymImage, AltSymPreimage;
+import "definitions.m":AltSymImage, AltSymPreimage, IsNewCodeApplicable;
 
 SymSquare := function( type, n, q : twist := false )
 
