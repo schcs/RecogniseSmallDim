@@ -1,6 +1,6 @@
 AttachSpec( "spec" );
 SetVerbose( "SymSquareVerbose", 1 );
-SetMemoryLimit( 2*10^9 );
+//SetMemoryLimit( 2*10^9 );
 
 
 G2 := ActionGroup( SymmetricSquare( GModule( SL( 2, 25 ))));
@@ -16,7 +16,7 @@ import "altsquare.m":RecogniseAltSquareDim4;
 import "altsquare.m":RecogniseAltSquareDim5;
 import "altsquare_sp.m":RecogniseAltSquareWithTensorDecompositionSp;
 
-import "auxfunctions.m":SplitTensor, IsSimilarModScalar;
+import "auxfunctions.m":SplitTensor, IsSimilarModScalar, IsSimilarModMinus1List;
 import "smalldimreps.m":funcposinv_symsquare, __funcSLdqToSymSquare,
         funcposinv_altsquare, _funcSymSquareToSLdq, funcpos_altsquare;
 import "symsquare_omega.m":RecogniseSymSquareWithTensorDecompositionOmegaFunc;
