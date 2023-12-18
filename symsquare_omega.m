@@ -332,9 +332,13 @@ RecogniseSymSquareOmegaFunc := function( G :
         
         (###) This is why the previous step with min pols was performed. */
 
-        listch := [ x : x in [1..#genst] | MinimalPolynomial( genst[x] ) ne
-                    MinimalPolynomial( genstt[x]  )];
+        //listch := [ x : x in [1..#genst] | MinimalPolynomial( genst[x] ) ne
+        //            MinimalPolynomial( genstt[x]  )];
+        
+        listch := [ x : x in [1..#genst] | not IsSimilar( genst[x], genstt[x] )];
+                    
         mns := GL( dimT, q )!ScalarMatrix( GF( q ), dimT, -1 ); // scalar matrix -I 
+        
         for i in listch do
             genstt[i] := mns*genstt[i];
             assert MinimalPolynomial( genstt[i] ) eq MinimalPolynomial( genst[i] );
@@ -344,6 +348,11 @@ RecogniseSymSquareOmegaFunc := function( G :
         TT := GModule( sub< GL( dimT, q ) | genstt >);
         v, al := IsIsomorphic( T, TT );
         
+        if not v then 
+            PrintFileMagma( "error_genst", genst );
+            PrintFileMagma( "error_genstt", genstt );
+        end if;
+
         assert v;
 
         V := VectorSpace( GF( q ), dimT );
