@@ -1,3 +1,6 @@
+// verbose is declared
+declare verbose SymSquareVerbose, 2;
+
 import "smalldimreps.m":__funcSLdqToSymSquare, __funcSymSquareToSLdq, 
                         __funcSLdqToAltSquare, __funcAltSquareToSLdq;
 
@@ -140,7 +143,8 @@ end function;
         elif type eq "Omega+" and dim lt 12 then return false;  
         elif type eq "Omega-" and dim lt 12 then return false; 
         elif type eq "Omega" and dim lt 9 then return false; 
-        elif <type,dim,q> eq <"Omega",9,3> then return false; end if; 
+        elif <type,dim,q> eq <"Omega",9,3> then return false;         
+        elif type eq "Omega*" and dim lt 12 then return false; end if; 
     
     end if; 
 

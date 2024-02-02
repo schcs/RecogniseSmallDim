@@ -5,7 +5,7 @@ import "smalldimreps.m":SolveAltSquareDimEq, funcpos_altsquare,
 funcposinv_altsquare, __funcSLdqToAltSquare, __funcAltSquareToSLdq;
 
 import "auxfunctions.m": MyDerivedGroupMonteCarlo, 
-  IsSimilarModScalar, SplitTensor, InvolutionWithProperty;
+  IsSimilarModScalarList, SplitTensor, InvolutionWithProperty;
   
 import "sp_aux.m": BuildBasis, TestBasis, SpTransformMatrix;
 
@@ -335,18 +335,18 @@ RecogniseAltSquareSpFunc := function( G : Method := "Recursive" )
         /* we need to identify the two tensor components with the two 
         Sp components obtained earlier. */
     
-        vh, scalarsh := IsSimilarModScalar( gens1h, gens2h ); 
+        vh, scalarsh := IsSimilarModScalarList( gens1h, gens2h ); 
     
         if vh then
-            vk, scalarsk := IsSimilarModScalar( gens1k, gens2k );
+            vk, scalarsk := IsSimilarModScalarList( gens1k, gens2k );
             gens2h := [ ScalarMatrix( GF(q), dimH, scalarsh[i] )*
                         gens2h[i] : 
                           i in [1..#gensCD] ];
             gens2k := [ ScalarMatrix( GF(q), dimK, scalarsk[i] )*gens2k[i] : 
                           i in [1..#gensCD] ];                            
         else 
-            vh, scalarsh := IsSimilarModScalar( gens1h, gens2k ); 
-            vk, scalarsk := IsSimilarModScalar( gens1k, gens2h ); 
+            vh, scalarsh := IsSimilarModScalarList( gens1h, gens2k ); 
+            vk, scalarsk := IsSimilarModScalarList( gens1k, gens2h ); 
             assert vh and vk;
             temp  := gens2h;
             gens2h := [ ScalarMatrix( GF(q), dimK, scalarsh[i] )*gens2k[i] : 
@@ -417,8 +417,8 @@ RecogniseAltSquareSpFunc := function( G : Method := "Recursive" )
    form := ClassicalForms( g )`bilinearForm; 
    
    vH := Sqrt( form[1,dimg] )^-1; 
-   posK1 := funcpos_altsquare( dim, dH/2+1,dH/2+2 : type := "Sp" );
-   posK2 := funcpos_altsquare( dim, dim-dH/2-1,dim-dH/2 : type := "Sp" );
+   posK1 := funcpos_altsquare( dim, dH div 2+1, dH div 2+2 : type := "Sp" );
+   posK2 := funcpos_altsquare( dim, dim-dH div 2-1, dim-dH div 2 : type := "Sp" );
    if pdividesd then posK2 := posK2 - 1; end if;
    vK := Sqrt( form[posK1,posK2] )^-1; 
    posT := funcpos_altsquare( dim, dim, dim-dH div 2 : type := "Sp" );
