@@ -3,13 +3,16 @@
 The package contains Magma implementations for some recognition algorithms for small-dimensional representations 
 of classical groups.
 
-The two main functions are RecogniseAltSquare and RecogniseSymSquare.
+The two main functions are RecogniseAltSquare and RecogniseSymSquare. These need to be imported before used:
 
-intrinsic RecogniseAltSquare( G::GrpMat : 
+import "symsquare.m": RecogniseSymSquare;
+import "altsquare.m": RecogniseAltSquare;
+
+
+RecogniseAltSquare( G : 
             type := "SL", 
             CheckResult := true,
             Method := "Recursive" ) 
-          -> BoolElt, Map, Map, GrpMatElt, GrpMatElt
                                                          
 G should be matrix group conjugate to the exterior square representation
 of SL( d, q ). Returns true/false, a map from SL( d, q ) to G, a map from 
@@ -26,8 +29,7 @@ with IsTensor. In small dimensions (how small depends on the type of the group),
 tensor recognition is called, while if the dimension is high enough, then the recursive version is used.
 This choice can be overwritten by setting <Method> to "Tensor".
   
-intrinsic RecogniseSymSquare( G::GrpMat : type := "SL", CheckResult := false ) 
-          -> BoolElt, Map, Map, GrpMatElt, GrpMatElt
+RecogniseSymSquare( G : type := "SL", CheckResult := false ) -> BoolElt, Map, Map, GrpMatElt, GrpMatElt
                                                          
 G should be matrix group conjugate to the symmetric square representation
 of SL( d, q ). Returns true/false, a map from SL( d, q ) to G, a map from 
@@ -53,4 +55,4 @@ this implementation only works for invertible matrices and the other cases may l
 
 Written by Csaba Schneider.
 csaba@mat.ufmg.br
-www.mat.ufmg.br/~csaba
+https://schcs.github.io/WP/
