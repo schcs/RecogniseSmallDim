@@ -559,25 +559,24 @@ RecogniseSymSquareFunc := function( G : type := "SL", IsRecursiveCall := false )
     return true, a, b, tr;
 end function;
 
-    
-intrinsic RecogniseSymSquare( G::GrpMat : type := "SL", 
-                                          CheckResult := false ) 
-          -> BoolElt, Map, Map, GrpMatElt
-                                                         
-{Checks if the input group G is isomorphic to a classical group of type <type> over a field of 
- odd characteristic in its symmetric square representation. Returns true or false, a map from the 
- the standard copy of the classical group in Magma to G, a map from G to the classical group in Magma, 
- and two matrices X and Y such that the conjugate G^X is equal to the large composition factor of the 
- symmetric square of Y*S*Y^-1 in the standard basis where S is the corresponding classical group in Magma. 
-                           
- Use the optional argument "CheckResult := true" to check the final result.
-                           
-The basic algorithm is implemented in two variations. The first uses a recursive call for smaller 
-dimensional symmetric square recognition, while the second uses recognition of tensor decomposition 
-with IsTensor. In small dimensions (how small depends on the type of the group), the version using 
-tensor recognition is called, while if the dimension is high enough, then the recursive version is used.
-This choice can be overwritten by setting <Method> to "Tensor".}      
 
+/* The wrapping function for the different implementations of the RecogniseSymSquare producedurs. 
+
+   This is the function to be imported in referring packages. 
+   
+   Checks if the input group G is isomorphic to a classical group of type <type> over a field of 
+   odd characteristic in its symmetric square representation. Returns true or false, a map from the 
+   the standard copy of the classical group in Magma to G, a map from G to the classical group in Magma, 
+   and two matrices X and Y such that the conjugate G^X is equal to the large composition factor of the 
+   symmetric square of Y*S*Y^-1 in the standard basis where S is the corresponding classical group in Magma. 
+                           
+   Use the optional argument "CheckResult := true" to check the final result. */
+                           
+
+RecogniseSymSquare := function( G : type := "SL", 
+                                          CheckResult := false ) 
+          //-> BoolElt, Map, Map, GrpMatElt
+                                                         
     if assigned G`AltSymSquareInfo then 
         return true, G`AltSymSquareInfo`phi_map, G`AltSymSquareInfo`tau_map, G`AltSymSquareInfo`tr_matrix_outer;
     end if; 
@@ -651,6 +650,6 @@ This choice can be overwritten by setting <Method> to "Tensor".}
     end if;
     
     return true, a, b, tr^-1;    
-end intrinsic;
+end function;
 
 
