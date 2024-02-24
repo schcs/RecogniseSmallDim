@@ -7,7 +7,7 @@ funcposinv_altsquare, __funcSLdqToAltSquare, __funcAltSquareToSLdq;
 import "auxfunctions.m": MyDerivedGroupMonteCarlo, 
   IsSimilarModScalarList, SplitTensor, InvolutionWithProperty;
   
-import "sp_aux.m": BuildBasis, TestBasis, SpTransformMatrix;
+import "altsquare_aux.m": BuildBasis, TestBasis, SpTransformMatrix;
 
 /* The recognition procedure for the exterior square representations
    of the symplectic groups. */
@@ -110,6 +110,7 @@ RecogniseAltSquareSpFunc := function( G : Method := "Recursive" )
         
         M := GModule( CD );
         mins := [ x : x in MinimalSubmodules( M : Limit := 4 )];
+        print( [ Dimension( x ) : x in mins ]);
             
         if #mins ne nocomponents or &+[ Dimension( x ) : x in mins ] lt dimg or 
            not __dimcheck([ Dimension( x ) : x in mins ]) then

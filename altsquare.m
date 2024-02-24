@@ -12,11 +12,12 @@ import "smalldimreps.m":SolveAltSquareDimEq, funcpos_altsquare,
   __funcSLdqToAltSquare, __funcAltSquareToSLdq;
   
 import "auxfunctions.m": MyDerivedGroupMonteCarlo, IsSimilarModMinus1List, 
-  IsSimilarModScalarList, InvolutionWithProperty, RandomElementWithProperty, IsSimilarModScalarMat, SplitTensor;
+  IsSimilarModScalarList, InvolutionWithProperty, RandomElementWithProperty, IsSimilarModScalarMat, 
+  SplitTensor, InvolutionWithCentralizer;
 
 import "altsquare_sp.m": RecogniseAltSquareSpFunc;
-
 import "definitions.m":altsymsquareinforf, IsNewCodeApplicable;
+import "altsquare_aux.m":find_scalar_for_mT;
 
 
 // 2-dimensional recognition
@@ -76,141 +77,6 @@ RecogniseAltSquareDim4 := function( G : type := "SL" )
     
     return true, a, b, mat^-1;
 end function;    
-
-
- /* find an involution with sufficiently large minus one eigenspace and 
-       its centraliser. */
-
-InvolutionWithCentralizer := function( G, type, dimG, dim )
-    
-    // the eigenspace dimensions are set using heuristics
-    // eiglim1: lower limit; eiglim2: upper limit for eigenspaces
-    if type eq "Omega-" and dim eq 12 then 
-        eiglim1 := 36; eiglim2 := 36;
-    elif type eq "Omega" and dim eq 9 then 
-        eiglim1 := 18; eiglim2 := 18;
-    else 
-        eiglim1 := case< dim | 6: 8, 11: 29, 12: 35, default: (2/9)*dim^2 >; 
-        eiglim2 := case< dim | 6: 8, default: (1/4)*dim^2 >; 
-    end if;
-      
-    // set up property function for InvolutionWithProperty  
-    propfunc := function( x )
-        dmin := Dimension( Eigenspace( x, -1 ));  
-        return dmin ge eiglim1 and dmin le eiglim2;
-    end function;
-        
-    // completion checking function    
-    NrGensCentInv := 10; 
-    __compcheck := func< G, C, g | NumberOfGenerators( C ) ge NrGensCentInv >;
-    
-    
-    // we want to take the perfect subgroup inside the centralizer of the 
-    // involution. This variable shows how deep we need to go inside the 
-    // derived series.
-    dl := case< dim | 8: 2, 9: 2, 10: 2, 11: 2, 12: 2, 18: 2, default : 1 >;
-
-    // this function returns true if the condition we want for the dimensions of the 
-    // CD-components is true
-    good_dims := func< dims | #dims eq 3 and not 1 in dims and &+dims eq dimG >;
-    type_is_omega := type in { "Omega+", "Omega-", "Omega", "Omega*" };
-
-    repeat
-        // get an involution with the right eigenspace dimensions   
-        inv := InvolutionWithProperty( G, propfunc ); 
-        // set up lists for the generators of the centralizer and its derived subgroup
-        gensC := []; gensCD := [];
-        
-        // we need to find its centralizer. The centralizer of involution function may not 
-        // return the full centralizer, and this is why we need to repeat.
-        // TODO: Is it simpler to chose another involution when Cent is too small?
-        
-       repeat 
-            // find the centralizer of inv and its derived subgroup
-            C := CentraliserOfInvolution( G, inv : CompletionCheck := __compcheck );   
-            CD := MyDerivedGroupMonteCarlo( C : 
-                      NumberGenerators := NrGensCentInv,
-                      DerivedLength := dl );      
-
-            // add the computed generators to the ones that were computed
-            gensC := gensC cat GeneratorsSequence( C );
-            gensCD := gensCD cat GeneratorsSequence( CD );
-            // update C and CD
-            C := sub< Universe( gensC ) | gensC >;
-            CD := sub< Universe( gensCD ) | gensCD >;
-
-            // compute the CD-module and its minimal submodules
-            M := GModule( CD );
-            mins := [ x : x in MinimalSubmodules( M : Limit := 4 )];
-            // If M contains a unique submodule of dimension 1, then it is hopless and we get another 
-            // involution
-            dim_mins := [ Dimension( x ) : x in mins ]; 
-            nr_ones := #[ x : x in [1..#mins] | dim_mins[x] eq 1 ];
-            // if M has more than 4 minimal submodules, then we need more generators
-            // and so we repeat the centralizer computation
-            stop_condition := #mins lt 4 or nr_ones eq 1;
-            //print dim_mins;
-        until stop_condition;  
-    // the right centralizer should have 3 minimal submodules that form a direct sum            
-    until  good_dims( dim_mins );
-
-    return inv, gensCD, CD, M, mins;
-end function;
-    
-// a part of the basis calculated in the main function might need to be multiplied by a scalar
-// this is done in this function 
-find_scalar_for_mT := procedure( G, ~tr, dim, dH, q )
-
-    p12 := funcpos_altsquare( dim, 1, 2 );
-    p13 := funcpos_altsquare( dim, 1, dH+1 );
-    p23 := funcpos_altsquare( dim, 2, dH+1 );
-    p14 := funcpos_altsquare( dim, 1, dH+2 );
-    p34 := funcpos_altsquare( dim, dH+1, dH+2 );
-
-    repeat
-        x := tr*Random( G )*tr^-1;
-        mat1 := Matrix( GF( q ), 3, 3, [
-                        x[p12,p12],    x[p12,p13],    x[p12,p23],
-                        x[p13,p12],    x[p13,p13],    x[p13,p23],        
-                        x[p23,p12],    x[p23,p13],    x[p23,p23]] );
-        
-        mat2 := Matrix( GF( q ), 3, 3, [
-                        x[p13,p13],    x[p13,p14],    x[p13,p34],
-                        x[p14,p13],    x[p14,p14],    x[p14,p34],        
-                        x[p34,p13],    x[p34,p14],    x[p34,p34]] );
-        
-        if Determinant( mat1 ) eq 0 or Determinant( mat2 ) eq 0 then 
-            mm1 := ZeroMatrix( GF( q ), 3 );
-            mm1 := ZeroMatrix( GF( q ), 3 );
-        else
-            mm1 := __funcAltSquareToSLdq( mat1 ); 
-            mm2 := __funcAltSquareToSLdq( mat2 );
-        end if;
-                        
-    until mm1[1,1] ne 0 and mm1[1,3] ne 0;
-
-    assert mm1[1,1] eq mm2[1,1];
-    
-    lambdasq := mm1[1,3]/mm2[1,2]; 
-    is_sq, lambda := IsSquare( lambdasq );
-    
-    if is_sq then 
-      for i in [1..dH], j in [dH+1..dim] do
-            pij := funcpos_altsquare( dim, i, j ); tr[pij] := lambda*tr[pij];
-       end for; 
-    else 
-      z0 := PrimitiveElement( GF( q ));
-      lambda := Sqrt( z0*lambdasq );
-      for i in [1..dH], j in [dH+1..dim] do
-            pij := funcpos_altsquare( dim, i, j ); tr[pij] := lambda*tr[pij];
-      end for;
-    
-      for i in [dH+1..dim], j in [i+1..dim] do
-            pij := funcpos_altsquare( dim, i, j );
-            tr[pij] := z0*tr[pij];
-      end for;
-    end if; 
-end procedure;
    
 
 /* The following function performs AltSquare recognition. */
