@@ -164,7 +164,7 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
             not IsSimilarModScalarMat( x@ak, x@ak : can_be_one := false )  
             >;
     else 
-        is_suitable_generator := func< x | //not IsSimilar( x@at, -x@at ) and 
+        is_suitable_generator := func< x | not IsSimilar( x@at, -x@at ) and 
         not IsSimilarModScalarMat( x@ah, x@ah : can_be_one := false ) and 
         not IsSimilarModScalarMat( x@ak, x@ak : can_be_one := false )  >;
         //is_suitable_generator := func< x | MinimalPolynomial( x@at ) ne MinimalPolynomial( -x@at ) >;

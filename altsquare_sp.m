@@ -5,9 +5,9 @@ import "smalldimreps.m":SolveAltSquareDimEq, funcpos_altsquare,
 funcposinv_altsquare, __funcSLdqToAltSquare, __funcAltSquareToSLdq;
 
 import "auxfunctions.m": MyDerivedGroupMonteCarlo, 
-  IsSimilarModScalarList, SplitTensor, InvolutionWithProperty;
+  IsSimilarModScalarList, SplitTensor, InvolutionWithProperty, InvolutionWithCentralizer;
   
-import "altsquare_aux.m": BuildBasis, TestBasis, SpTransformMatrix;
+import "altsquare_aux.m": BuildBasisSp, TestBasisSp, SpTransformMatrix;
 
 /* The recognition procedure for the exterior square representations
    of the symplectic groups. */
@@ -25,14 +25,9 @@ RecogniseAltSquareSpFunc := function( G : Method := "Recursive" )
     // the natural dimension of G
     dim := SolveAltSquareDimEq( dimg : type := "Sp" );
     pdividesd := dim mod p eq 0;
-    if dim mod p eq 0 then 
-        chardivdim := true; 
-    else 
-        chardivdim := false; 
-    end if;
         
-    assert (not chardivdim and dim*(dim-1)/2-1 eq dimg) or 
-      (chardivdim and dim*(dim-1)/2-2 eq dimg);
+    assert (not pdividesd and dim*(dim-1)/2-1 eq dimg) or 
+      (pdividesd and dim*(dim-1)/2-2 eq dimg);
     
     if dim lt 8 then
         print "AltSquare recognition is not implemented for these parameters";
@@ -51,75 +46,8 @@ RecogniseAltSquareSpFunc := function( G : Method := "Recursive" )
    /* find an involution with sufficiently large minus one eigenspace and 
        its centraliser. */
       
+    inv, gensCD, CD, M, mins := InvolutionWithCentralizer( G, "Sp", dimg, dim );
 
-    //c1 := 0.2; c2 := 0.3; 
-    c1 := 2/9; c2 := 1/4;
-
-    eiglim1 := case< dim | 6: 9, 14: 40, default: c1*dim^2 >; 
-    // lower limit for eigenspace dim
-    eiglim2 := case< dim | 6: 9, default: c2*dim^2 >; 
-    // upper limit for eigenspace dim
-
-    // set up property function for InvolutionWithProperty  
-    propfunc := function( x )
-        dmin := Dimension( Eigenspace( x, -1 ));
-        dplus := Dimension( Eigenspace( x, 1 ));
-
-        //return dmin ge 6 and dplus ge 6;
-        return dmin ge eiglim1 and dmin le eiglim2;
-    end function;
-        
-    // completion checking function
-
-    NrGensCentInv := 10; 
-    __compcheck := func< G, C, g | NumberOfGenerators( C ) ge NrGensCentInv >;
-    
-    gensC := []; gensCD := [];
-    
-    /* the following block will find an involution with the right
-      minus one eigenspace and sets up its centralizer */      
-      
-    nocomponents := case< chardivdim | true: 3, default: 4 >;
-
-    __dimcheck := function( dims )
-
-        if #dims ne 3 then return true; end if;
-        dims0 := [ SolveAltSquareDimEq( x : type := "Sp" ) : x in dims ];
-        notz := [ i : i in [1..3] | dims0[i] ne 0 ];
-        if #notz ne 2 then return false; end if;
-        ind := [ x : x in [1..3] | not x in notz ][1];
-
-        res := dims0[notz[1]]*dims0[notz[2]] eq dims[ind];
-
-        if not res then print dims, "rejected!!!!!!!!!!!!!!!!!!!!"; end if;
-
-        return res;
-    end function; 
-
-    repeat   
-        if not assigned inv then 
-            inv := InvolutionWithProperty( G, propfunc );
-        end if; 
-        C := CentraliserOfInvolution( G, inv : 
-                     CompletionCheck := __compcheck );  
-        CD := MyDerivedGroupMonteCarlo( C : 
-                      NumberGenerators := NrGensCentInv,
-                      DerivedLength := 3 );
-        gensCD := gensCD cat GeneratorsSequence( CD );
-        CD := sub< Universe( gensCD ) | gensCD >;
-        
-        M := GModule( CD );
-        mins := [ x : x in MinimalSubmodules( M : Limit := 4 )];
-        print( [ Dimension( x ) : x in mins ]);
-            
-        if #mins ne nocomponents or &+[ Dimension( x ) : x in mins ] lt dimg or 
-           not __dimcheck([ Dimension( x ) : x in mins ]) then
-            delete inv, C, CD;
-            gensCD := [];
-            mins := [];
-            continue;
-        end if;
-    until  #mins eq nocomponents and &+[ Dimension( x ) : x in mins ] eq dimg;
     vprint SymSquareVerbose: "#   Cent comput dim", dim, "took ", 
       Cputime()-cputm, #gensCD, "gens used.";
       
@@ -140,7 +68,7 @@ RecogniseAltSquareSpFunc := function( G : Method := "Recursive" )
                 Dimension( mins[x] ) ge 2 ];
     
     // in the case of Sp and char ndiv dim there is a one-dimensional component
-    if not chardivdim then
+    if not pdividesd then
         monedim := [ mins[x] : x in [1..#mins] | Dimension( mins[x] ) eq 1 ][1];
     end if;
         
@@ -381,13 +309,13 @@ RecogniseAltSquareSpFunc := function( G : Method := "Recursive" )
     
     end if; //END OF TENSOR SPECIFIC CODE
 
-    if not chardivdim then
+    if not pdividesd then
         basOneDim := [ M!(Basis( monedim )[1])];
     else
         basOneDim := [ Zero( M )];
     end if;
 
-    bas := BuildBasis( basH, basK, basT : wH := basOneDim[1] );
+    bas := BuildBasisSp( basH, basK, basT : wH := basOneDim[1] );
     tr := GL( dimg, q )!bas;
     
     g := sub< SL( dimg, q ) | { bas*x*bas^-1 : x in Generators( G0 )}>;
@@ -411,7 +339,7 @@ RecogniseAltSquareSpFunc := function( G : Method := "Recursive" )
        end for;
    end if; 
    
-   bas := BuildBasis( basH, basK, basT : wH := basOneDim[1] );
+   bas := BuildBasisSp( basH, basK, basT : wH := basOneDim[1] );
    tr := GL( dimg, q )!bas;
    
    g := sub< SL( dimg, q ) | { bas*x*bas^-1 : x in Generators( G0 )}>;
@@ -439,7 +367,7 @@ RecogniseAltSquareSpFunc := function( G : Method := "Recursive" )
        basT[i] := vT*basT[i];
    end for;
    
-   bas := BuildBasis( basH, basK, basT : wH := basOneDim[1] ); 
+   bas := BuildBasisSp( basH, basK, basT : wH := basOneDim[1] ); 
          
    g := sub< SL( dimg, q ) | { bas*x*bas^-1 : x in Generators( G0 )}>;
    form := ClassicalForms( g )`bilinearForm; 
@@ -459,14 +387,13 @@ RecogniseAltSquareSpFunc := function( G : Method := "Recursive" )
               
    end if;
 
-   v, coeffs := 
-     TestBasis( basH, basK, basT, basOneDim[1], basOneDim[1], G0 );  
+   v, coeffs := TestBasisSp( basH, basK, basT, basOneDim[1], basOneDim[1], G0 );  
    assert v; 
 
    vprint SymSquareVerbose: "# Recog AltSquare dim", dim, "took ", 
      Cputime()-cputm;
    
-   tr := BuildBasis( [ coeffs[1]*x : x in basH ],
+   tr := BuildBasisSp( [ coeffs[1]*x : x in basH ],
                       [ coeffs[2]*x : x in basK ],
                       [ coeffs[3]*x : x in basT ] :
                  wH := coeffs[4]*basOneDim[1] );

@@ -221,3 +221,163 @@ ScalarOfPreservedForm := function( mat, form )
 end function;
     
 
+ /* find an involution with sufficiently large minus one eigenspace and 
+       its centraliser. */
+
+InvolutionWithCentralizer := function( G, type, dimG, dim )
+    
+    // the eigenspace dimensions are set using heuristics
+    // eiglim1: lower limit; eiglim2: upper limit for eigenspaces
+    if type eq "Omega-" and dim eq 12 then 
+        eiglim1 := 36; eiglim2 := 36;
+    elif type eq "Omega" and dim eq 9 then 
+        eiglim1 := 18; eiglim2 := 18;
+    elif type eq "Sp" and dim eq 6 then 
+        eiglim1 := 9; eiglim2 := 9;
+    elif type eq "Sp" and dim eq 14 then 
+        eiglim1 := 40; eiglim2 := 49;
+    else 
+        eiglim1 := case< dim | 6: 8, 11: 29, 12: 35, default: (2/9)*dim^2 >; 
+        eiglim2 := case< dim | 6: 8, default: (1/4)*dim^2 >; 
+    end if;
+      
+    // set up property function for InvolutionWithProperty  
+    propfunc := function( x )
+        dmin := Dimension( Eigenspace( x, -1 ));  
+        return dmin ge eiglim1 and dmin le eiglim2;
+    end function;
+        
+    // completion checking function    
+    NrGensCentInv := 10; 
+    __compcheck := func< G, C, g | NumberOfGenerators( C ) ge NrGensCentInv >;
+    
+    
+    if type eq "Sp" then 
+        // we want to take the perfect subgroup inside the centralizer of the 
+        // involution. This variable shows how deep we need to go inside the 
+        // derived series.
+        dl := 3;
+        // the number of components in the C0-module
+        nocomponents := case< dim mod Characteristic( CoefficientRing( G )) eq 0 | true: 3, default: 4 >;
+        // this function returns true if the condition we want for the dimensions of the 
+        // CD-components is true
+        good_dims := func< dims | #dims eq nocomponents and &+dims eq dimG >;
+    else 
+        // the same when the type is not Sp
+        dl := case< dim | 8: 2, 9: 2, 10: 2, 11: 2, 12: 2, 18: 2, default : 1 >;
+        nocomponents := 3;
+        good_dims := func< dims | #dims eq nocomponents and not 1 in dims and &+dims eq dimG >;
+    end if; 
+
+    repeat
+        // get an involution with the right eigenspace dimensions   
+        inv := InvolutionWithProperty( G, propfunc ); 
+        // set up lists for the generators of the centralizer and its derived subgroup
+        gensC := []; gensCD := [];
+        
+        // we need to find its centralizer. The centralizer of involution function may not 
+        // return the full centralizer, and this is why we need to repeat.
+        // TODO: Is it simpler to chose another involution when Cent is too small?
+        
+       repeat 
+            // find the centralizer of inv and its derived subgroup
+            C := CentraliserOfInvolution( G, inv : CompletionCheck := __compcheck );   
+            CD := MyDerivedGroupMonteCarlo( C : 
+                      NumberGenerators := NrGensCentInv,
+                      DerivedLength := dl );      
+
+            // add the computed generators to the ones that were computed
+            gensC := gensC cat GeneratorsSequence( C );
+            gensCD := gensCD cat GeneratorsSequence( CD );
+            // update C and CD
+            C := sub< Universe( gensC ) | gensC >;
+            CD := sub< Universe( gensCD ) | gensCD >;
+
+            // compute the CD-module and its minimal submodules
+            M := GModule( CD );
+            mins := [ x : x in MinimalSubmodules( M : Limit := 4 )];
+            // If M contains a unique submodule of dimension 1, then it is hopless and we get another 
+            // involution
+            dim_mins := [ Dimension( x ) : x in mins ]; 
+            nr_ones := #[ x : x in [1..#mins] | dim_mins[x] eq 1 ];
+            // if M has more than 4 minimal submodules, then we need more generators
+            // and so we repeat the centralizer computation
+            stop_condition := #mins lt 4 or nr_ones eq 1;
+            //print dim_mins;
+        until stop_condition;  
+    // the right centralizer should have 3 minimal submodules that form a direct sum            
+    until  good_dims( dim_mins );
+
+    return inv, gensCD, CD, M, mins;
+end function;
+/*
+InvolutionWithCentralizerAltSp := function( G, type, dimG, dim )
+    
+    c1 := 2/9; c2 := 1/4;
+
+    eiglim1 := case< dim | 6: 9, 14: 40, default: c1*dim^2 >; 
+    // lower limit for eigenspace dim
+    eiglim2 := case< dim | 6: 9, default: c2*dim^2 >; 
+    // upper limit for eigenspace dim
+
+    // set up property function for InvolutionWithProperty  
+    propfunc := function( x )
+        dmin := Dimension( Eigenspace( x, -1 ));
+        dplus := Dimension( Eigenspace( x, 1 ));
+
+        //return dmin ge 6 and dplus ge 6;
+        return dmin ge eiglim1 and dmin le eiglim2;
+    end function;
+        
+    // completion checking function
+
+    NrGensCentInv := 10; 
+    __compcheck := func< G, C, g | NumberOfGenerators( C ) ge NrGensCentInv >;
+    
+    gensC := []; gensCD := [];
+    
+    //  the following block will find an involution with the right
+    //  minus one eigenspace and sets up its centralizer       
+      
+    nocomponents := case< pdividesd | true: 3, default: 4 >;
+
+    __dimcheck := function( dims )
+
+        if #dims ne 3 then return true; end if;
+        dims0 := [ SolveAltSquareDimEq( x : type := "Sp" ) : x in dims ];
+        notz := [ i : i in [1..3] | dims0[i] ne 0 ];
+        if #notz ne 2 then return false; end if;
+        ind := [ x : x in [1..3] | not x in notz ][1];
+
+        res := dims0[notz[1]]*dims0[notz[2]] eq dims[ind];
+
+        if not res then print dims, "rejected!!!!!!!!!!!!!!!!!!!!"; end if;
+
+        return res;
+    end function; 
+
+    repeat   
+        if not assigned inv then 
+            inv := InvolutionWithProperty( G, propfunc );
+        end if; 
+        C := CentraliserOfInvolution( G, inv : 
+                     CompletionCheck := __compcheck );  
+        CD := MyDerivedGroupMonteCarlo( C : 
+                      NumberGenerators := NrGensCentInv,
+                      DerivedLength := 3 );
+        Append( ~gensCD, GeneratorsSequence( CD ));
+        CD := sub< Universe( gensCD ) | gensCD >;
+        
+        M := GModule( CD );
+        mins := [ x : x in MinimalSubmodules( M : Limit := 4 )];
+            
+        if #mins ne nocomponents or &+[ Dimension( x ) : x in mins ] lt dimg or 
+           not __dimcheck([ Dimension( x ) : x in mins ]) then
+            delete inv, C, CD;
+            gensCD := [];
+            mins := [];
+            continue;
+        end if;
+    until  #mins eq nocomponents and &+[ Dimension( x ) : x in mins ] eq dimg;
+
+*/

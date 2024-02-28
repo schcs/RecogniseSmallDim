@@ -5,7 +5,7 @@
     for Sp(n,q).
 
     Written by Csaba Schneider.
-    Analysed in February - March, 2024
+    Analysed in February 2024
 */
 
 import "smalldimreps.m":funcpos_altsquare, SolveAltSquareDimEq, __funcAltSquareToSLdq, __funcSLdqToAltSquare;
@@ -96,177 +96,219 @@ SpSubspace := function( d1, d2, F : pdividesd := false )
 
 end function;
     
-/* Builds standard basis for V given standard bases for H, K and 
-   T = H tensor K */
+/* 
+   Builds standard basis for V in the case of sympectic groups acting on the exterior square. 
+   We assume that V = U + W and we have standard bases for H = U wedge U, K = W wedge W, and for T = U tensor W. 
+   We can also pass on optional argument scalars which specifies a scalar factors and wH which specifies  
+*/
             
-BuildBasis := function( basH, basK, basT : wH, scalars := [1,1,1,1] )
 
-    a := scalars[1]; b := scalars[2]; c := scalars[3];
-    d := scalars[4]; 
-              
-    q := #Field( Parent( basH[1] ));
+/* TODO: This can be replaced by a single matrix multiplication. If there was a function to build the bases of H, K, T, then 
+   this computation can be done by computing this basis matrix, inverting it, and multiplying the input with this inverted matrix. */
+
+BuildBasisSp := function( basH, basK, basT : wH, scalars := [1,1,1,1] )
+
+    a := scalars[1]; b := scalars[2]; c := scalars[3]; d := scalars[4]; 
+    
+    V := Parent( basH[1] ); ZV := Zero( V );
+    q := #Field( V );
     _, p := IsPrimePower( q );
     
+    // first multiply the bases with the respective scalars
     for v in [1..#basH] do
-        basH[v] := a*basH[v];
+        basH[v] *:= a;
     end for;
     
     for v in [1..#basK] do
-        basK[v] := b*basK[v];
+        basK[v] *:= b;
     end for;
     
     for v in [1..#basT] do
-        basT[v] := c*basT[v];
+        basT[v] *:= c;
     end for;
     
     if not Category( wH ) eq BoolElt then
-        bone1 := d*wH;
+        wH *:= d;
     end if;
-    
-    bas := [];
-              
+        
+    // calculate the dimensions of H and K
     dH := SolveAltSquareDimEq( #basH : type := "Sp" ); 
     dK := SolveAltSquareDimEq( #basK : type := "Sp" );
     d := dH + dK;
-    pdividesd := d mod p eq 0;
-    rangeH := [1..dH/2] cat [dH/2+dK+1..d];
-    rangeK := [dH/2+1..dH/2+dK];
     
-    trmat := SpTransformMatrix( dH, dK, GF( q )); 
-    subsp := SpSubspace( dH, dK, GF( q ) : pdividesd := (d mod p) eq 0 );
-    vecs_ex := [ basH[ funcpos_altsquare( dH, i, dH-i+1 : type := "Sp" )] :
-                 i in [1..dH/2-1]];
-    
-    if not pdividesd then
-        vecs_ex := vecs_ex cat [ bone1 ];
-    end if;
-    
-    vecs_ex := vecs_ex cat [ basK[ funcpos_altsquare( dK, i, dK-i+1 : 
-                       type := "Sp" )] : i in [1..dK/2-1]];
-    
-    if not pdividesd then
-        vecs_ex := vecs_ex cat [ -bone1 ];
-    else
-        vecs_ex := vecs_ex cat [ 0*bone1 ];
-        vecs_ex := vecs_ex cat [ 0*bone1 ];
-    end if;
-    
-    for i in [1..d] do
-        for j in [i+1..d] do
-            i0 := i; j0 := j;
-            if <i0,j0> eq <d div 2,d div 2+1> then
-                continue j;
-            end if;
-            if i0 in rangeH and j0 in rangeH then
-                
-                if i0 gt dH/2 then
-                    i0 := i0 - dK;
-                end if;
-                
-                if j0 gt dH/2 then
-                    j0 := j0 - dK;
-                end if;
-                
-                if i0+j0 ne dH+1 then
-                    
-                    vec := basH[ funcpos_altsquare( dH, i0, j0 : 
-                                   type := "Sp" )];
-                    bas[ funcpos_altsquare( d, i, j : type := "Sp" )] := vec;
-                    
-                else
-                    
-                    V := VectorSpace( GF( q ), d div 2 );
-                    vec := Zero( V );
-                    vec[i0] := 1; vec[d div 2] := -1;
-                    // vec := vec*trmat^-1;
-                    vec := Coordinates( subsp, vec );
-                    if pdividesd then Append( ~vec, 0 ); end if;
-                    vec := &+[ vec[i]*vecs_ex[i] : i in [1..d/2]];
-                    bas[ funcpos_altsquare( d, i, j : type := "Sp" )] := vec;
-                    
-                end if;
-                
-            elif i0 in rangeK and j0 in rangeK then
-                
-                i0 := i0 - dH div 2;
-                j0 := j0 - dH div 2;
-                if i0 + j0 ne dK +1 then
-                    
-                    vec := basK[ funcpos_altsquare( dK, i0, j0 : 
-                                   type := "Sp" )];
-                    bas[ funcpos_altsquare( d, i, j : type := "Sp" )] := vec;
-                    
-                else
-                    V := VectorSpace( GF( q ), d div 2 );
-                    vec := Zero( V );
-                    vec[dH div 2+i0] := 1; vec[ d div 2 ] := -1;
-                    
-                    //vec := vec*trmat^-1;
-                    vec := Coordinates( subsp, vec );
-                    if pdividesd then Append( ~vec, 0 ); end if;
-                    vec := &+[ vec[i]*vecs_ex[i] : i in [1..d/2]];
-                    bas[ funcpos_altsquare( d, i, j : type := "Sp" )] := vec;
+    // divide dimensions by 2
+    dd := d div 2; ddH := dH div 2; ddK := dK div 2;
 
-                end if;
+    // check if p divides the dimension
+    pdividesd := d mod p eq 0;
+
+    // calculate the total dimension and an array to hold the basis
+    dim := case< pdividesd | true: dd*(d-1) - 2, default: dd*(d-1) -1 >;
+    bas := [ Zero( Parent( basH[1] )) : _ in [1..dim] ];
+
+    /* 
+       we think of the spaces H and K to be spaced as 
+       e1,...,ed,e{d+1},...,en,fn,...,f{d+1},fd,...,f1
+       where H is <e_1,...,ed,fd,...,f1>, while K is <e{d+1},...,en,fn,...,f{d+1}>
+       we calculate the indices for the basis vectors that belong to H and K.
+    */
+
+    rangeH := [1..ddH] cat [ddH+dK+1..d]; rangeK := [ddH+1..ddH+dK];
+
+    /* 
+      We generate the subspace that corresponds to 
+      e1f1 - edfd, ..., e{d-1}f{d-1}, 
+      (*) e1f1+e2f2+...+edfd
+      e{d+1}f{d+1}-enfn,...,e{n-1}f{n-1}-enfn, 
+      (*) e{d+1}f{d+1}+...+enfn
+
+      if pdividesd then the two basis elements with (*) are omitted and 
+      e1f1+...+enfn is added in the last position.
+    */
+    
+    subsp := SpSubspace( dH, dK, GF( q ) : pdividesd := pdividesd );
+
+    // we create the list of basis elements from basH that are of the form 
+    // e1f1-edfd, ..., e{d-1}f{d-1}-edfd 
+    vecs_ex := [ basH[ funcpos_altsquare( dH, i, dH-i+1 : type := "Sp" )] : i in [1..ddH-1]];
+    
+    // if not pdividesd then we add the generator of wH which corresponds to
+    // e1f1+...+edfd 
+    if not pdividesd then
+        Append( ~vecs_ex, wH );
+    end if;
+    
+    // we add the basis elements e{d+1}f{d+1}-enfn
+    vecs_ex := vecs_ex cat [ basK[ funcpos_altsquare( dK, i, dK-i+1 : type := "Sp" )] : i in [1..ddK-1]];
+    
+    // if needed we add -wH which corresponds to e{d+1}f{d+1}+...+enfn
+    if not pdividesd then
+        Append( ~vecs_ex, -wH );
+    else
+        // otherwise we full up the list with two instances of the zero vector
+        vecs_ex := vecs_ex cat [ ZV, ZV ];
+    end if;
+    
+    // V0 represents the vector space generated by the e1f1,...,enfn
+    V0 := VectorSpace( GF( q ), dd ); ZV0 := Zero( V0 );
+
+    // we build up the basis for V from the bases in the input
+    // the indices run for 1 <= i < j <= d
+    for i in [1..d], j in [i+1..d] do
+        i0 := i; j0 := j;
+        // the basis element enfn skipped
+        if i0 eq dd and j0 eq dd+1  then
+            continue j;
+        end if;
+
+        // the first option is when the corresponding basis element comes from H
+        if i0 in rangeH and j0 in rangeH then
                 
-            elif i0 in rangeH and j0 in rangeK then
-                
-                vec := basT[(i0-1)*dK+j0-dH div 2];
-                bas[ funcpos_altsquare( d, i, j : type := "Sp" )] := vec;
-                
-            elif i0 in rangeK and j0 in rangeH then
-                                
-                vec := basT[(j0-dK-1)*dK+i0-dH div 2];
-                bas[ funcpos_altsquare( d, i, j : type := "Sp" )] := -vec;
-                
+            // Since K is inserted into the middle of H, i0 and j0 has to be offset if they 
+            // represent fi    
+            if i0 gt ddH then i0 -:= dK; end if;
+            if j0 gt ddH then j0 -:= dK; end if;
+
+            // if the basis element <i0,j0> is not eifi-enfn    
+            if i0+j0 ne dH+1 then
+                // get the corresponding vector from basH
+                vec := basH[ funcpos_altsquare( dH, i0, j0 : type := "Sp" )];
+                // put it into the right place in bas
+                bas[ funcpos_altsquare( d, i, j : type := "Sp" )] := vec;    
+            else  
+                // the vector to be treated is of the type eifi - enfn
+                // we need to write it as a linear combination of the basis vectors of basH and basK
+                // first we build this vector                 
+                vec := ZV0; vec[i0] := 1; vec[dd] := -1;
+                // compute its coeffs in the basis of subsp
+                vec := Coordinates( subsp, vec );
+                // if pdividesd then we append a zero
+                if pdividesd then Append( ~vec, 0 ); end if;
+                // take the linear combination of the elements in vecs_ex with these coefficients
+                vec := &+[ vec[i]*vecs_ex[i] : i in [1..dd]];
+                // insert into the right position
+                bas[ funcpos_altsquare( d, i, j : type := "Sp" )] := vec;                    
             end if;
-        end for;
+        
+        // the next option is when i0, j0 represent a vector in K
+        elif i0 in rangeK and j0 in rangeK then
+                
+            // we calculate the position relative to K
+            i0 -:= ddH; j0 -:= ddH;
+
+
+            if i0 + j0 ne dK +1 then   
+                // when the vector is not of the form eifi - enfn 
+                vec := basK[ funcpos_altsquare( dK, i0, j0 : type := "Sp" )];
+                bas[ funcpos_altsquare( d, i, j : type := "Sp" )] := vec;
+            else
+                // type eifi - enfn handled as in the H-type vectors above                
+                vec := ZV0; vec[ddH+i0] := 1; vec[dd] := -1;
+                vec := Coordinates( subsp, vec );
+                if pdividesd then Append( ~vec, 0 ); end if;
+                vec := &+[ vec[i]*vecs_ex[i] : i in [1..dd]];
+                bas[ funcpos_altsquare( d, i, j : type := "Sp" )] := vec;
+            end if;
+                
+        // here we handle H x K type vectors that lie in the tensor product
+        // component
+        elif i0 in rangeH and j0 in rangeK then
+            vec := basT[(i0-1)*dK+j0-ddH];
+            bas[ funcpos_altsquare( d, i, j : type := "Sp" )] := vec;
+
+        // in the case of K x H vectors, the same procedure, but multiplying with -1
+        elif i0 in rangeK and j0 in rangeH then                                
+            vec := basT[(j0-dK-1)*dK+i0-ddH];
+            bas[ funcpos_altsquare( d, i, j : type := "Sp" )] := -vec;
+        end if;
     end for;
     
-    if d mod p eq 0 then
-        bas := Remove( bas, 
-        funcpos_altsquare( d, (d div 2) -1, (d div 2) + 2 ));
+
+    // if pdividesd then we remove the basis element corresponding to e{d-1}f{d-1}
+    if pdividesd then
+        bas := Remove( bas, funcpos_altsquare( d, dd -1, dd + 2 ));
     end if;
                     
-    return Matrix( GF( q ), #bas, #bas, [ [ y[i] : i in [1..#bas]] 
-                   : y in bas ]);
+    return Matrix( bas );
 end function;
 
-TestBasis := function( basH, basK, basT, wH, wK, g )
+
+// the following functions tests if a system of bases for H, K, T, wH, and wK is the right one
+// up to +-1 scalars.
+
+// THIS FUNCTION NEEDS CHECKING! Is it enough to take one random number?
+
+TestBasisSp := function( basH, basK, basT, wH, wK, g )
     
+    // the possible combinations for the scalars
     scalars := [ <a,b,c,d > : a in [1,-1], b in [1,-1], c in [1,-1], 
                  d in [1,-1]]; 
-    results := [];
-    maxzero := 0;
     
+    // check all possible combinations of scalars
     for s in scalars do 
-        bas := BuildBasis( basH, basK, basT : wH := wH,
-                       scalars := [s[1], s[2], s[3], s[4]] );
-        x0 := Random( g );
-        try
-          x := bas*x0*bas^-1;
-          y := __funcAltSquareToSLdq( x : type := "Sp" );
-          x1 := __funcSLdqToAltSquare( y : type := "Sp" );
-          if x*x1^-1 eq x^0 then
-              //print s[1], s[2], s[3], s[4], s[5];
-              Append( ~results, true );
-              return true, s;
-          else 
-              Append( ~results, false );
-              els := Eltseq( x-x1 );
-              poszero := #[ els[x] : x in [1..#els] | els[x] eq 0 ];
-              if poszero gt maxzero then
-                 maxzero := poszero;
-                 maxs := s;
-              end if;
-          end if;
-                            
-          catch e 
-            Append( ~results, false );
-      end try;
+        // build the basis
+        bas := BuildBasisSp( basH, basK, basT : wH := wH, scalars := [s[1], s[2], s[3], s[4]] );
+        // take random element from the group
+        // we want one outside of the center
+        repeat 
+            x0 := Random( g );
+        until (x0,Random(g)) ne x0^0;
+        // apply basis transform on x0
+        x := bas*x0*bas^-1;
+        // find preimage of x
+        y := __funcAltSquareToSLdq( x : type := "Sp" );
+        // check if the result is valid
+        if Category( y ) eq BoolElt then continue; end if;
+        // find image of y and check if result is valid
+        x1 := __funcSLdqToAltSquare( y : type := "Sp" );
+        if Category( x1 ) eq BoolElt or not IsInvertible( x1 ) then continue; end if;
+        // x should be x1 if the scalars are right
+        if x eq x1  then
+            return true, s;
+        end if;
     end for;
     
-    return true in results, maxs, maxzero;
+    return false, _;
 end function;
     
 // a part of the basis calculated in the main function might need to be multiplied by a scalar
@@ -323,3 +365,16 @@ find_scalar_for_mT := procedure( G, ~tr, dim, dH, q )
       end for;
     end if; 
 end procedure;
+
+/*
+SpDecompositionMatrix := function( d1, d2, q )
+    
+    d := d1 + d2;
+    dd := d div 2; dd1 := d1 div 2; dd2 := d2 div 2;
+
+    F := GF( q );
+    _, p := IsPrimePower( q );
+    mat := ZeroMatrix( GF( q ), d, d );
+
+    for i in [1..d] do 
+*/
