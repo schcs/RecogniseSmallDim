@@ -158,34 +158,17 @@ TestAltSquare_new := function(type, d, q : NrTries := 100 )
 end function;
 
 
-TestSymSquare2 := function( type, limd, limq, nr )
+TestSymSquare2 := function( type, limd, limq, nr : startdim := 2 )
     
     vb := GetVerbose( "SymSquareVerbose" );
     SetVerbose( "SymSquareVerbose", 0 );
 
 
-    ranged := case< type | "SL": [2..limd], "GL": [3..limd], 
-              "SU": [3..limd], "GU": [3..limd],
-              "Sp": [4..limd by 2], 
-              "Omega+": [10..limd by 2], "GO+": [10..limd by 2], "SO+": [10..limd by 2],
-              "Omega-": [8..limd by 2], "GO-": [10..limd by 2], "SO-": [10..limd by 2],
-              "Omega": [9..limd by 2],   "GO": [9..limd by 2], "SO": [9..limd by 2],
-              default: [3..limd]  >;
 
-
-    ranged := case< type | "Sp": [2..limd by 2], "Omega+": [2..limd by 2], "Omega-": [2..limd by 2],
-                           "Omega": [3..limd by 2], default: [2..limd] >;
+    ranged := case< type | "Sp": [startdim..limd by 2], "Omega+": [startdim..limd by 2], "Omega-": [startdim..limd by 2],
+                           "Omega": [startdim..limd by 2], default: [startdim..limd] >;
 
     
-    exc := [ <"Sp", 6, 3>, <"Sp", 9, 3 >, <"SU", 6, 7 >, <"Sp", 10, 3 >,
-            <"GO+",10,3>,<"SO+",10,3>,<"Omega+",10,3>,<"GO+",10,9>,
-            <"SO+",10,9>,<"GO+",10,27>,<"SO+",10,27>,
-            <"Omega-",10,3>,
-            <"GO-",10,3>,<"GO-",10,9>,<"GO-",10,27>,
-            <"SO-",10,3>,
-            <"GO",9,5>,<"GO",9,25>,
-            <"SO",9,5>,<"SO",9,25>];
-
     exc := [];
 
     qs := [ x : x in [3..limq] | IsPrimePower( x )];

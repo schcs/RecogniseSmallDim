@@ -4,8 +4,8 @@
 import "smalldimreps.m":__funcSLdqToSymSquare, __funcSymSquareToSLdq, 
 SolveSymSquareDimEq, funcpos_symsquare, funcposinv_symsquare, BasisMatrixForSymSquareOmega;
 
-import "auxfunctions.m": MyDerivedGroupMonteCarlo, IsSimilarToScalarMultiple, 
-    SplitTensor, IsSimilarModScalar, TransformToForm, OldFormOmegaMinus, ScalarOfPreservedForm;
+import "auxfunctions.m": MyDerivedGroupMonteCarlo, IsSimilarModScalarMat, 
+    SplitTensor, IsSimilarModScalarList, TransformToForm, OldFormOmegaMinus, ScalarOfPreservedForm;
 
 import "symsquare_omega_aux.m":TestBasisOmega, OmegaBasisFromComponents, 
     BuildBasisOmega, TypeOfSymSquareOmega, SymSquareOmegaBasisWithOmegaMinus, 
@@ -206,16 +206,16 @@ RecogniseSymSquareOmegaFunc := function( G :
     for i in [1..#gensCD] do
         if Determinant( gensCD[i]@ah ) ne 1 or 
               Determinant( gensCD[i]@ak ) ne 1 or 
-              IsSimilarToScalarMultiple( gensCD[i]@ah ) or
-              IsSimilarToScalarMultiple( gensCD[i]@ak ) or 
-              IsSimilarToScalarMultiple( gensCD[i]@at ) then
+              IsSimilarModScalarMat( gensCD[i]@ah, gensCD[i]@ah : can_be_one := false ) or
+              IsSimilarModScalarMat( gensCD[i]@ak, gensCD[i]@ak : can_be_one := false ) or 
+              IsSimilarModScalarMat( gensCD[i]@at, gensCD[i]@at : can_be_one := false ) then
            repeat
                x := Random( CD );
            until Determinant( x@ah ) eq 1 and
                 Determinant( x@ak ) eq 1 and not 
-                IsSimilarToScalarMultiple( x@ah ) and not
-                IsSimilarToScalarMultiple( x@ak ) and not
-                IsSimilarToScalarMultiple( x@at );
+                IsSimilarModScalarMat( x@ah, x@ah : can_be_one := false ) and not
+                IsSimilarModScalarMat( x@ak, x@ak : can_be_one := false ) and not
+                IsSimilarModScalarMat( x@at, x@at : can_be_one := false );
             gensCD[i] := x; 
        end if;
    end for; 
@@ -332,9 +332,13 @@ RecogniseSymSquareOmegaFunc := function( G :
         
         (###) This is why the previous step with min pols was performed. */
 
-        listch := [ x : x in [1..#genst] | MinimalPolynomial( genst[x] ) ne
-                    MinimalPolynomial( genstt[x]  )];
+        //listch := [ x : x in [1..#genst] | MinimalPolynomial( genst[x] ) ne
+        //            MinimalPolynomial( genstt[x]  )];
+        
+        listch := [ x : x in [1..#genst] | not IsSimilar( genst[x], genstt[x] )];
+                    
         mns := GL( dimT, q )!ScalarMatrix( GF( q ), dimT, -1 ); // scalar matrix -I 
+        
         for i in listch do
             genstt[i] := mns*genstt[i];
             assert MinimalPolynomial( genstt[i] ) eq MinimalPolynomial( genst[i] );
@@ -344,6 +348,11 @@ RecogniseSymSquareOmegaFunc := function( G :
         TT := GModule( sub< GL( dimT, q ) | genstt >);
         v, al := IsIsomorphic( T, TT );
         
+        if not v then 
+            PrintFileMagma( "error_genst", genst );
+            PrintFileMagma( "error_genstt", genstt );
+        end if;
+
         assert v;
 
         V := VectorSpace( GF( q ), dimT );
@@ -519,18 +528,18 @@ RecogniseSymSquareOmegaFunc := function( G :
                     x in gens1k ];
         gens2k := [ x@ak : x in gensCD ];
         
-        vh, scalarsh := IsSimilarModScalar( gens1h, gens2h ); 
+        vh, scalarsh := IsSimilarModScalarList( gens1h, gens2h ); 
 
         if vh then 
-            vk, scalarsk := IsSimilarModScalar( gens1k, gens2k );
+            vk, scalarsk := IsSimilarModScalarList( gens1k, gens2k );
             gens2h := [ ScalarMatrix( GF(q), dimH, scalarsh[i] )*
                         gens2h[i] : 
                         i in [1..#gensCD] ];
             gens2k := [ ScalarMatrix( GF(q), dimK, scalarsk[i] )*gens2k[i] : 
                         i in [1..#gensCD] ];                            
         else 
-            vh, scalarsh := IsSimilarModScalar( gens1h, gens2k ); 
-            vk, scalarsk := IsSimilarModScalar( gens1k, gens2h ); 
+            vh, scalarsh := IsSimilarModScalarList( gens1h, gens2k ); 
+            vk, scalarsk := IsSimilarModScalarList( gens1k, gens2h ); 
             assert vh and vk;
             temp  := gens2h;
             gens2h := [ ScalarMatrix( GF(q), dimK, scalarsh[i] )*gens2k[i] : 

@@ -5,7 +5,7 @@ import "smalldimreps.m":SolveAltSquareDimEq, funcpos_altsquare,
 funcposinv_altsquare, __funcSLdqToAltSquare, __funcAltSquareToSLdq;
 
 import "auxfunctions.m": MyDerivedGroupMonteCarlo, 
-  IsSimilarModScalar, SplitTensor, InvolutionWithProperty;
+  IsSimilarModScalarList, SplitTensor, InvolutionWithProperty;
   
 import "sp_aux.m": BuildBasis, TestBasis, SpTransformMatrix;
 
@@ -15,7 +15,9 @@ import "sp_aux.m": BuildBasis, TestBasis, SpTransformMatrix;
 forward RecogniseAltSquareSpFunc;
 
 RecogniseAltSquareSpFunc := function( G : Method := "Recursive" )
-                                               
+
+
+    print "!!!!!!! CALLING OLD FUNCTION!!!!!!!!!";
     cputm := Cputime(); 
     
     // set up some standard things
@@ -335,18 +337,18 @@ RecogniseAltSquareSpFunc := function( G : Method := "Recursive" )
         /* we need to identify the two tensor components with the two 
         Sp components obtained earlier. */
     
-        vh, scalarsh := IsSimilarModScalar( gens1h, gens2h ); 
+        vh, scalarsh := IsSimilarModScalarList( gens1h, gens2h ); 
     
         if vh then
-            vk, scalarsk := IsSimilarModScalar( gens1k, gens2k );
+            vk, scalarsk := IsSimilarModScalarList( gens1k, gens2k );
             gens2h := [ ScalarMatrix( GF(q), dimH, scalarsh[i] )*
                         gens2h[i] : 
                           i in [1..#gensCD] ];
             gens2k := [ ScalarMatrix( GF(q), dimK, scalarsk[i] )*gens2k[i] : 
                           i in [1..#gensCD] ];                            
         else 
-            vh, scalarsh := IsSimilarModScalar( gens1h, gens2k ); 
-            vk, scalarsk := IsSimilarModScalar( gens1k, gens2h ); 
+            vh, scalarsh := IsSimilarModScalarList( gens1h, gens2k ); 
+            vk, scalarsk := IsSimilarModScalarList( gens1k, gens2h ); 
             assert vh and vk;
             temp  := gens2h;
             gens2h := [ ScalarMatrix( GF(q), dimK, scalarsh[i] )*gens2k[i] : 

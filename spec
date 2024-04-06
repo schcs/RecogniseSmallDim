@@ -5,9 +5,8 @@ definitions.m
 symsquare_omega_aux.m
 symsquare_omega.m
 symsquare.m
-sp_aux.m
+altsquare_aux.m
 altsquare_sp.m
+sp_aux.m
 altsquare.m
 recogsmalldim.m
-
-#omega_10_experiment.m
