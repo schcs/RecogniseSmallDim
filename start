@@ -1,6 +1,6 @@
 AttachSpec( "spec" );
 SetVerbose( "SymSquareVerbose", 1 );
-SetMemoryLimit( 2*10^9 );
+//SetMemoryLimit( 2*10^9 );
 
 
 G2 := ActionGroup( SymmetricSquare( GModule( SL( 2, 25 ))));

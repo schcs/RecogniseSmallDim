@@ -189,7 +189,6 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
         gensC := gensC cat GeneratorsSequence( C );
         gensCD := gensCD cat GeneratorsSequence( CD );
         C := sub< Universe( gensC ) | gensC >;
-
         CD := sub< Universe( gensCD ) | gensCD >;
 
         M := GModule( CD );
@@ -202,7 +201,7 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
             gensCD := [];
             repeatflag := true;
         end if;
-        until  not repeatflag and #mins eq 3 and &+[ Dimension( x ) : x in mins ] eq dimg;
+    until  not repeatflag and #mins eq 3 and &+[ Dimension( x ) : x in mins ] eq dimg;
     
     vprint SymSquareVerbose: "#   Cent comput dim", dim, "took ", 
       Cputime()-cputm, #gensC, "gens used.";
@@ -241,6 +240,23 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
     
     at := pmap< GL( dimg, q ) -> GL( dimT, q ) | 
           x :-> GL( dimT, q )![ Eltseq( mT!((M!b)^x )) : b in Basis( mT )]>;
+    /* For some technical reason (see (###) later), the projection of a 
+       generator of C cannot have the same minimal polynomial as its negative. 
+       If some generator fails to satisfy this, it is thrown away and is 
+       replaced by another one. */  
+
+       
+    mns := GL( dimT, q )!ScalarMatrix( GF( q ), dimT, -1 );
+    
+    for i in [1..#gensCD] do
+        gi := gensCD[i]@at;
+        if MinimalPolynomial( gi ) eq MinimalPolynomial( mns*gi) then
+           repeat
+               x := Random( CD ); xa := x@at;
+           until MinimalPolynomial( xa ) ne MinimalPolynomial( mns*xa );
+           gensCD[i] := x;
+       end if;
+    end for;
 
     if type in { "Omega", "Omega+", "Omega-" } then
         typeh := "Omega*"; typek := "Omega*";
@@ -263,9 +279,7 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
 
     mnsh := GL( dimH, q )!ScalarMatrix( GF( q ), dimH, -1 );
     mnsk := GL( dimK, q )!ScalarMatrix( GF( q ), dimK, -1 );
-        
-    // TODO: check if this is needed in this version. I suspect not.    
-        
+             
     for i in [1..#gensCD] do
         if Determinant( gensCD[i]@ah ) ne 1 or 
               Determinant( gensCD[i]@ak ) ne 1 or 
@@ -283,6 +297,7 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
        end if;
    end for; 
    
+  
    CD:= sub< Universe( gensCD ) | gensCD >;
 
    if Method eq "Tensor" then 
@@ -465,7 +480,19 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
         T := GModule( sub< GL( dimT, q ) | genst >);
     
         TT := GModule( sub< GL( dimT, q ) | genstt >);
-        v, al := IsIsomorphic( T, TT ); assert v;
+
+        // error code
+        v, al := IsIsomorphic( T, TT ); 
+        if not v then
+            print "ERROR!!!!!!!!!!!!";
+            PrintFileMagma( "error_file_t", T ); PrintFileMagma( "error_file_tt", TT );
+            PrintFileMagma( "error_gensCD", gensCD );
+            PrintFileMagma( "error_inv", inv );
+            print inv;
+            error( "error caught" );
+        end if; 
+        
+        assert v;
     
         /* find the vectors eij with 1 <= j <= dH and dH+1 <= j <= dimg and 
            insert them into their place in bas. */
