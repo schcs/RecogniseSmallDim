@@ -13,11 +13,15 @@ import "smalldimreps.m":SolveAltSquareDimEq, funcpos_altsquare,
   
 import "auxfunctions.m": MyDerivedGroupMonteCarlo, IsSimilarModMinus1List, 
   IsSimilarModScalarList, InvolutionWithProperty, RandomElementWithProperty, IsSimilarModScalarMat, 
-  SplitTensor, InvolutionWithCentralizer;
+  SplitTensor, ScalarOfPreservedForm;
 
 import "altsquare_sp.m": RecogniseAltSquareSpFunc;
 import "definitions.m":altsymsquareinforf, IsNewCodeApplicable;
-import "altsquare_aux.m":find_scalar_for_mT;
+import "altsquare_aux.m":find_scalar_for_mT, InvolutionWithCentralizer, BuildBasis, 
+        BuildBasisSp, find_right_tr_matrix;
+  
+
+
 
 
 // 2-dimensional recognition
@@ -94,11 +98,14 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
     dim := SolveAltSquareDimEq( dimg : type := type ); 
     vprint SymSquareVerbose: "# Recog AltSquare dim", dim, 
             "type", type, "method", Method ;
+    
+    // need to know if type is Sp and p divides dim
+    sp_pdividesd := type eq "Sp" and dim mod p eq 0;
 
     // Sp groups are handled by another function
-    if type eq "Sp" then
-      return RecogniseAltSquareSpFunc( G : Method := Method );
-    end if;
+    //if type eq "Sp" then
+    //  return RecogniseAltSquareSpFunc( G : Method := Method );
+    //end if;
                                                                        
     // in small dimension, call other functions
     case dim: 
@@ -119,11 +126,11 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
          respectively. The third is isomorphic to U tensor W.  
          The two alt squares lie in one of the eigenspaces of inv. The tensor 
          lies in the other eigenspace. */
-     
-    mplus := [ mins[x] : x in [1..3] | 
-               (M!mins[x].1)^inv eq M!mins[x].1 ];
-    mminus := [ mins[x] : x in [1..3] | 
-                (M!mins[x].1)^inv eq -M!mins[x].1 ];
+
+
+    // !!!THIS NEEDS MODIFIED    
+    mplus := [ mins[x] : x in [1..#mins] | Dimension( mins[x] ) ge 2 and (M!mins[x].1)^inv eq M!mins[x].1 ];
+    mminus := [ mins[x] : x in [1..#mins] | Dimension( mins[x] ) ge 2 and (M!mins[x].1)^inv eq -M!mins[x].1 ];
     
     // extract the submodules
     // mH, mK: U wedge U and W wedge W; mT: U tensor W.       
@@ -132,10 +139,16 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
     else 
         mH := mminus[1]; mK := mminus[2]; mT := mplus[1];
     end if;      
+
+    if type eq "Sp" and not sp_pdividesd then
+        monedim := [ mins[x] : x in [1..#mins] | Dimension( mins[x] ) eq 1 ][1];
+    else 
+        monedim := [];
+    end if;
         
     // calculate the dimensions
     dimH := Dimension( mH ); dimK := Dimension( mK ); dimT := Dimension( mT );
-    dH := SolveAltSquareDimEq( dimH ); dK := SolveAltSquareDimEq( dimK ); 
+    dH := SolveAltSquareDimEq( dimH : type := type ); dK := SolveAltSquareDimEq( dimK : type := type ); 
     dT := dH*dK; assert Dimension( mT ) eq dT;
 
     // set up the projections into the components. In theory, this could be done by the following line,
@@ -237,12 +250,53 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
        // calculate the two sets of generators that correspond to the projection to the component H.
        // First we calculate the projection to the first tensor component and then apply the AltSquare 
        // function 
-       gens1h := [ GL(dimH,q)!__funcSLdqToAltSquare( x@ch ) : x in gensCD ];
+       gens1h := [ x@ch : x in gensCD ];
+       gens1k := [ x@ck : x in gensCD ];
+       
+       if type eq "Sp" then 
+
+            // calculate the form preserved by < gens1h > and < gens1k >
+            h_form := ClassicalForms( sub< Universe( gens1h ) | gens1h > : Scalars := true )`bilinearForm;
+            k_form := ClassicalForms( sub< Universe( gens1k ) | gens1k > : Scalars := true )`bilinearForm;
+
+            // calculate the scalars. The computation in the precvious line already calculates these scalars, but 
+            // if there is repeated generators or the identity among the generators, then the lines below give error.
+            sch := [ ScalarOfPreservedForm( x, h_form ) : x in gens1h ];    
+            sck := [ ScalarOfPreservedForm( x, k_form ) : x in gens1k ];
+                   
+            // if a generator preseve the form module -1, then this is fixed.
+            for i in [1..#sch] do
+                if sch[i] ne 1 then
+                    gens1h[i] := gens1h[i]*ScalarMatrix( GF( q ), dH, Sqrt( GF( q )!(sch[i]))^-1);
+                    gens1k[i] := gens1k[i]*ScalarMatrix( GF( q ), dK, Sqrt( GF( q )!(sck[i]))^-1 );
+                end if;
+            end for;
+    
+            /* now sub< gens1h > and sub< gens1k > preserve the form. 
+            we calculate the transformation matrices  and conjugate the 
+            generators to the right form. */
+      
+            Th := TransformForm( sub< Universe( gens1h ) | gens1h > );
+            Tk := TransformForm( sub< Universe( gens1k ) | gens1k > );
+    
+            tbas := TensorProduct( Th^-1, Tk^-1 )*tbas;
+            gens1h := [ x^Th : x in gens1h ];
+            gens1k := [ x^Tk : x in gens1k ];
+    
+            /* we calculate the matrices in the irreducible exterior square
+               representation of Sp( d, q ) */
+       end if; 
+       
+       gens1h := [ GL(dimH,q)!__funcSLdqToAltSquare( x : type := type ) : x in gens1h ];
+       gens2h := [ x@ah : x in gensCD ];
+       
+       gens1k := [ GL(dimK,q)!__funcSLdqToAltSquare( x : type := type ) : x in gens1k ];
+       gens2k := [ x@ak : x in gensCD ];
+
        // then we calculate the projection with the ah function
        gens2h := [ x@ah : x in gensCD ]; 
 
        // we do the same for the K-component
-       gens1k := [ GL(dimK,q)!__funcSLdqToAltSquare( x@ck ) : x in gensCD ];
        gens2k := [ x@ak : x in gensCD ];
        
        // the generators gens1h and gens2h should be similar module scalar
@@ -273,27 +327,12 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
        M2H := GModule( sub< GL( dimH, q ) | gens2h >);
        
        // they should be isomorphic 
-       v, trmh := IsIsomorphic( M1H, M2H ); 
-       if not v then 
-            gens1h_io := Open( "testgens1h", "w" );
-            gens2h_io := Open( "testgens2h", "w" );
-            WriteObject( gens1h_io, gens1h );
-            WriteObject( gens2h_io, gens2h ); 
-       end if; 
-       assert v;
-       
+       v, trmh := IsIsomorphic( M1H, M2H ); assert v;      
     
        // same with K
        M1K := GModule( sub< GL( dimK, q ) | gens1k >);
        M2K := GModule( sub< GL( dimK, q ) | gens2k >);    
-       v, trmk := IsIsomorphic( M1K, M2K ); 
-       if not v then 
-            gens1k_io := Open( "testgens1k", "w" );
-            gens2k_io := Open( "testgens2k", "w" );
-            WriteObject( gens1k_io, gens1k );
-            WriteObject( gens2k_io, gens2k ); 
-        end if; 
-       assert v;
+       v, trmk := IsIsomorphic( M1K, M2K ); assert v;
            
        // transform the basis of mH, mK, and mT into the right form
        basH_mat := trmh*Matrix( Basis( mH )); 
@@ -302,8 +341,8 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
        // the same for K and T
        basK_mat := trmk*Matrix( Basis( mK )); 
        basK := [ M!mK!basK_mat[x] : x in [1..dimK]];
-       basT_mat := tbas*Matrix( Basis( mT )); 
-       tbas := [ M!mT!basT_mat[x] : x in [1..dimT]];
+       tbas_mat := tbas*Matrix( Basis( mT )); 
+       basT := [ M!mT!tbas_mat[x] : x in [1..dimT]];
         
        // TENSOR SPECIFIC CODE ENDS HERE
     end if;
@@ -319,12 +358,12 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
         // strip the groups from unecessary decorations
         aH := MyDerivedGroupMonteCarlo( aH : DerivedLength := case< dH | 4: 2, default: 1 > ); 
         aK := MyDerivedGroupMonteCarlo( aK : DerivedLength := case< dK | 4: 2, default: 1 >); 
-
+        
         // run the recognition procedure 
-        v1, b1, c1, bas1 := RecogniseAltSquareFunc( aH : type := typeh );
-        v2, b2, c2, bas2 := RecogniseAltSquareFunc( aK : type := typek );
+        v1, b1, c1, bas1 := RecogniseAltSquareFunc( aH : type := type ); 
+        v2, b2, c2, bas2 := RecogniseAltSquareFunc( aK : type := type ); 
         assert v1 and v2;
-    
+
         // bas1 is [e12,e13,...,e23,...,e{k-1}{k}]
         // bas2 is [e{k+1}{k+2},...,e{d-1}d]
         basH_mat := bas1*Matrix( Basis( mH )); basH := [ M!mH!basH_mat[x] : x in [1..dimH]];
@@ -336,7 +375,7 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
     
         genst := [ x@at : x in gensCD ];
         genstt := [ TensorProduct( x@ah@c1, x@ak@c2 ) : x in gensCD ];
-
+        
         T := GModule( sub< GL( dimT, q ) | genst >);
         v, signs := IsSimilarModMinus1List( genst, genstt );      
         
@@ -394,46 +433,44 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
         
         /* find the vectors eij with 1 <= j <= dH and dH+1 <= j <= dimg and 
            insert them into their place in bas. */
-        tbas_mat := Matrix( Basis( mT ))*al^-1;
-        tbas := [ M!mT!tbas_mat[x] : x in [1..dimT]];
+        basT := Matrix( Basis( mT ))*al^-1;
+        basT := [ M!mT!basT[x] : x in [1..dimT]];
 
         // RECURSIVE CODE ENDS HERE
+    end if;
+    
+    if type eq "Sp" and not sp_pdividesd then
+        basOneDim := [ M!(Basis( monedim )[1])];
+    else
+        basOneDim := [ Zero( M )];
     end if;
 
     /* we return to the common part of the code. 
        At this point, the basis for H, K, and T are computed. We need mount the right basis for V.
 
-       we place the basis vectors computed in bas1 and bas2 into their place
-       in the basis of V */
+       We buld the basis using the bases calculated for H, K, and T */
 
-    bas := [ Zero( M ) : x in [1..dimg]];
-
-    for i in [1..dH], j in [i+1..dH] do
-        bas[funcpos_altsquare( dim, i, j )] := basH[funcpos_altsquare( dH, i, j )];
-    end for;
     
-    for i in [dH+1..dim], j in [i+1..dim] do
-        bas[funcpos_altsquare(dim, i, j )] := basK[funcpos_altsquare( dK, i-dH, j-dH )];
-    end for;
-    
-    for i in [1..dH], j in [dH+1..dim] do
-        bas[funcpos_altsquare( dim, i, j )] := tbas[(i-1)*dK+j-dH];
-    end for;
-
-    // tr is the matrix of basis change.       
-    tr := Matrix( bas );
+    if type ne "Sp" then    
+        tr := ZeroMatrix( GF( q ), dimg ); 
+        BuildBasis( ~tr, ~basH, ~basK, ~basT, dim, dimg, dH, dK );
+    else 
+        tr := ZeroMatrix( GF( q ), dimg + case< sp_pdividesd | true: 1, default: 0 >, dimg );
+        BuildBasisSp( ~tr, ~basH, ~basK, ~basT : wH := basOneDim[1] );
+    end if; 
     
     // some rows of the matrix tr need to be multiplied by a scalar.
-    find_scalar_for_mT( G, ~tr, dim, dH, q );
-    tr := GL( dimg, q )!tr;
-    
-    // construct the maps between GL(dim,q) and G
 
-    a := map< GL( dim, q ) -> GL( dimg, q ) | 
-         x :-> GL( dimg, q )!__funcSLdqToAltSquare( x )^tr >;
+    if type eq "Sp" then 
+        tr := find_right_tr_matrix( G, tr, dim, dimg, dH, dK, basH, basK, basT, basOneDim );
+    else 
+        find_scalar_for_mT( ~G, ~tr, dim, dH, q );
+    end if; 
+
+    // construct the maps between GL(dim,q) and G
     
-    b := pmap< GL( dimg, q ) -> GL( dim, q ) |
-         x :-> GL( dim, q )!__funcAltSquareToSLdq( x^(tr^-1)) >;
+    a := map< GL( dim, q ) -> GL( dimg, q ) | x :-> GL( dimg, q )!tr^-1*__funcSLdqToAltSquare( x : type := type )*tr >;
+    b := pmap< GL( dimg, q ) -> GL( dim, q ) | x :-> GL( dim, q )!__funcAltSquareToSLdq( tr*x*tr^-1 : type := type ) >;
 
     vprint SymSquareVerbose: "# Recog AltSquare dim", dim, "took ", 
       Cputime()-cputm;
@@ -487,7 +524,7 @@ This choice can be overwritten by setting <Method> to "Tensor".}
 
     if type in { "Omega+", "Omega-", "Omega" } then 
         form := ClassicalForms( sub< GL( dim, q ) | 
-                    [ __funcAltSquareToSLdq( x^(tr^-1) : type := type ) : 
+                    [ __funcAltSquareToSLdq( tr*x*tr^-1 : type := type ) : 
                             x in GeneratorsSequence( G )] >)`bilinearForm;
         tr_form := TransformForm( form, case< type | 
                                             "Omega+": "orthogonalplus", 
@@ -496,7 +533,7 @@ This choice can be overwritten by setting <Method> to "Tensor".}
                                             default: false  >);        
     elif type eq "SU" then 
         form := ClassicalForms( sub< GL( dim, q ) | 
-                    [ __funcAltSquareToSLdq( x^(tr^-1)) : x in GeneratorsSequence( G )] >)`sesquilinearForm;
+                    [ __funcAltSquareToSLdq( tr*x*tr^-1 ) : x in GeneratorsSequence( G )] >)`sesquilinearForm;
         tr_form := TransformForm( form, "unitary" );
     else 
         tr_form := One( GL( dim, q ));
@@ -507,13 +544,13 @@ This choice can be overwritten by setting <Method> to "Tensor".}
 
     tr_form_alt := __funcSLdqToAltSquare( tr_form : type := type );
     tr := GL( dimg, q )!(tr_form_alt^-1*tr);
-    
+    tr_inv := tr^-1;
 
     a := map< GL( dim, q ) -> GL( dimg, q ) | 
          x :-> GL( dimg, q )!__funcSLdqToAltSquare( x : type := type )^tr >;
     
     b := pmap< GL( dimg, q ) -> GL( dim, q ) |
-         x :-> (GL( dim, q )!__funcAltSquareToSLdq( x^(tr^-1) : type := type )) >;
+         x :-> (GL( dim, q )!__funcAltSquareToSLdq( x^(tr_inv) : type := type )) >;
 
     recog_rec := rec< altsymsquareinforf | 
                       Type := type, 
@@ -545,6 +582,5 @@ This choice can be overwritten by setting <Method> to "Tensor".}
         vprint SymSquareVerbose: "# Check passed.";
     end if;
 
-    return true, a, b, tr^-1;
+    return true, a, b, tr_inv;
 end intrinsic;
-

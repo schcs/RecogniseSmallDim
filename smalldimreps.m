@@ -45,7 +45,7 @@ end function;
 // solve the equation m = d(d-1)/2. This function does the same as the previous. 
 // See the comments of the previous function
   
-SolveAltSquareDimEq := function( m : type := "SL"  )
+SolveAltSquareDimEq := function( m : type := "SL", pmaydividedim := true )
 
     if type eq "Sp" then
         m +:= 1;
@@ -53,7 +53,7 @@ SolveAltSquareDimEq := function( m : type := "SL"  )
       
     sol := (1+Sqrt( 1+8*m ))/2;
     
-    if sol ne Round( sol ) and type eq "Sp" then
+    if pmaydividedim and type eq "Sp" and sol ne Round( sol ) then
         m +:= 1;
         sol := (1+Sqrt( 1+8*m ))/2;
     end  if;
@@ -251,6 +251,7 @@ end function;
 funcpos_altsquare := function( dim, i, j : type := "SL" )
     
     // i < j, if not, then we swap. We also calculate the natural index.
+
     if i gt j then
         temp := i; i := j; j := temp; 
     end if; 

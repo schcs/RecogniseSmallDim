@@ -8,8 +8,8 @@
     Analysed in February 2024
 */
 
-import "smalldimreps.m":funcpos_altsquare, SolveAltSquareDimEq, __funcAltSquareToSLdq, __funcSLdqToAltSquare;
-
+import "smalldimreps.m":funcpos_altsquare, SolveAltSquareDimEq, __funcAltSquareToSLdq, __funcSLdqToAltSquare, funcposinv_altsquare;
+import "auxfunctions.m": InvolutionWithProperty, MyDerivedGroupMonteCarlo;
 /* 
     This file contains some auxiliary functions that are necessary for the recognition of the exterior square 
     representations, especially in the case of the symplectic groups. 
@@ -95,7 +95,28 @@ SpSubspace := function( d1, d2, F : pdividesd := false )
     end if;
 
 end function;
+
+BuildBasis := procedure( ~bas, ~basH, ~basK, ~tbas, dim, dimg, dH, dK )
+
+    dH := SolveAltSquareDimEq( #basH ); 
+    dK := SolveAltSquareDimEq( #basK );
+    d := dH + dK;
+    //bas := [ Zero( Parent( basH[1] )) : x in [1..dimg]];
+
+    for i in [1..dH], j in [i+1..dH] do
+        bas[funcpos_altsquare( dim, i, j )] := Vector( basH[funcpos_altsquare( dH, i, j )]);
+    end for;
     
+    for i in [dH+1..dim], j in [i+1..dim] do
+        bas[funcpos_altsquare(dim, i, j )] := Vector( basK[funcpos_altsquare( dK, i-dH, j-dH )] );
+    end for;
+    
+    for i in [1..dH], j in [dH+1..dim] do
+        bas[funcpos_altsquare( dim, i, j )] := Vector( tbas[(i-1)*dK+j-dH] );
+    end for;
+
+    //return Matrix( bas );
+end procedure;
 /* 
    Builds standard basis for V in the case of sympectic groups acting on the exterior square. 
    We assume that V = U + W and we have standard bases for H = U wedge U, K = W wedge W, and for T = U tensor W. 
@@ -106,31 +127,14 @@ end function;
 /* TODO: This can be replaced by a single matrix multiplication. If there was a function to build the bases of H, K, T, then 
    this computation can be done by computing this basis matrix, inverting it, and multiplying the input with this inverted matrix. */
 
-BuildBasisSp := function( basH, basK, basT : wH, scalars := [1,1,1,1] )
+BuildBasisSp := procedure( ~bas, ~basH, ~basK, ~basT : wH, scalars := [1,1,1,1] )
 
     a := scalars[1]; b := scalars[2]; c := scalars[3]; d := scalars[4]; 
     
     V := Parent( basH[1] ); ZV := Zero( V );
     q := #Field( V );
     _, p := IsPrimePower( q );
-    
-    // first multiply the bases with the respective scalars
-    for v in [1..#basH] do
-        basH[v] *:= a;
-    end for;
-    
-    for v in [1..#basK] do
-        basK[v] *:= b;
-    end for;
-    
-    for v in [1..#basT] do
-        basT[v] *:= c;
-    end for;
-    
-    if not Category( wH ) eq BoolElt then
-        wH *:= d;
-    end if;
-        
+            
     // calculate the dimensions of H and K
     dH := SolveAltSquareDimEq( #basH : type := "Sp" ); 
     dK := SolveAltSquareDimEq( #basK : type := "Sp" );
@@ -144,7 +148,6 @@ BuildBasisSp := function( basH, basK, basT : wH, scalars := [1,1,1,1] )
 
     // calculate the total dimension and an array to hold the basis
     dim := case< pdividesd | true: dd*(d-1) - 2, default: dd*(d-1) -1 >;
-    bas := [ Zero( Parent( basH[1] )) : _ in [1..dim] ];
 
     /* 
        we think of the spaces H and K to be spaced as 
@@ -170,20 +173,20 @@ BuildBasisSp := function( basH, basK, basT : wH, scalars := [1,1,1,1] )
 
     // we create the list of basis elements from basH that are of the form 
     // e1f1-edfd, ..., e{d-1}f{d-1}-edfd 
-    vecs_ex := [ basH[ funcpos_altsquare( dH, i, dH-i+1 : type := "Sp" )] : i in [1..ddH-1]];
+    vecs_ex := [ a*basH[ funcpos_altsquare( dH, i, dH-i+1 : type := "Sp" )] : i in [1..ddH-1]];
     
     // if not pdividesd then we add the generator of wH which corresponds to
     // e1f1+...+edfd 
     if not pdividesd then
-        Append( ~vecs_ex, wH );
+        Append( ~vecs_ex, d*wH );
     end if;
     
     // we add the basis elements e{d+1}f{d+1}-enfn
-    vecs_ex := vecs_ex cat [ basK[ funcpos_altsquare( dK, i, dK-i+1 : type := "Sp" )] : i in [1..ddK-1]];
+    vecs_ex := vecs_ex cat [ b*basK[ funcpos_altsquare( dK, i, dK-i+1 : type := "Sp" )] : i in [1..ddK-1]];
     
     // if needed we add -wH which corresponds to e{d+1}f{d+1}+...+enfn
     if not pdividesd then
-        Append( ~vecs_ex, -wH );
+        Append( ~vecs_ex, -d*wH );
     else
         // otherwise we full up the list with two instances of the zero vector
         vecs_ex := vecs_ex cat [ ZV, ZV ];
@@ -212,9 +215,12 @@ BuildBasisSp := function( basH, basK, basT : wH, scalars := [1,1,1,1] )
             // if the basis element <i0,j0> is not eifi-enfn    
             if i0+j0 ne dH+1 then
                 // get the corresponding vector from basH
-                vec := basH[ funcpos_altsquare( dH, i0, j0 : type := "Sp" )];
+                vec := a*basH[ funcpos_altsquare( dH, i0, j0 : type := "Sp" )];
                 // put it into the right place in bas
-                bas[ funcpos_altsquare( d, i, j : type := "Sp" )] := vec;    
+                if  funcpos_altsquare( d, i, j : type := "Sp" ) gt Nrows( bas ) then 
+                    continue;
+                end if;
+                bas[ funcpos_altsquare( d, i, j : type := "Sp" )] := Vector( vec );    
             else  
                 // the vector to be treated is of the type eifi - enfn
                 // we need to write it as a linear combination of the basis vectors of basH and basK
@@ -227,7 +233,7 @@ BuildBasisSp := function( basH, basK, basT : wH, scalars := [1,1,1,1] )
                 // take the linear combination of the elements in vecs_ex with these coefficients
                 vec := &+[ vec[i]*vecs_ex[i] : i in [1..dd]];
                 // insert into the right position
-                bas[ funcpos_altsquare( d, i, j : type := "Sp" )] := vec;                    
+                bas[ funcpos_altsquare( d, i, j : type := "Sp" )] := Vector( vec );                    
             end if;
         
         // the next option is when i0, j0 represent a vector in K
@@ -239,38 +245,35 @@ BuildBasisSp := function( basH, basK, basT : wH, scalars := [1,1,1,1] )
 
             if i0 + j0 ne dK +1 then   
                 // when the vector is not of the form eifi - enfn 
-                vec := basK[ funcpos_altsquare( dK, i0, j0 : type := "Sp" )];
-                bas[ funcpos_altsquare( d, i, j : type := "Sp" )] := vec;
+                vec := b*basK[ funcpos_altsquare( dK, i0, j0 : type := "Sp" )];
+                bas[ funcpos_altsquare( d, i, j : type := "Sp" )] := Vector( vec );
             else
                 // type eifi - enfn handled as in the H-type vectors above                
                 vec := ZV0; vec[ddH+i0] := 1; vec[dd] := -1;
                 vec := Coordinates( subsp, vec );
                 if pdividesd then Append( ~vec, 0 ); end if;
                 vec := &+[ vec[i]*vecs_ex[i] : i in [1..dd]];
-                bas[ funcpos_altsquare( d, i, j : type := "Sp" )] := vec;
+                bas[ funcpos_altsquare( d, i, j : type := "Sp" )] := Vector( vec );
             end if;
                 
         // here we handle H x K type vectors that lie in the tensor product
         // component
         elif i0 in rangeH and j0 in rangeK then
-            vec := basT[(i0-1)*dK+j0-ddH];
-            bas[ funcpos_altsquare( d, i, j : type := "Sp" )] := vec;
+            bas[ funcpos_altsquare( d, i, j : type := "Sp" )] := c*Vector( basT[(i0-1)*dK+j0-ddH] );
 
         // in the case of K x H vectors, the same procedure, but multiplying with -1
         elif i0 in rangeK and j0 in rangeH then                                
-            vec := basT[(j0-dK-1)*dK+i0-ddH];
-            bas[ funcpos_altsquare( d, i, j : type := "Sp" )] := -vec;
+            bas[ funcpos_altsquare( d, i, j : type := "Sp" )] := -c*Vector( basT[(j0-dK-1)*dK+i0-ddH] );
         end if;
     end for;
     
 
     // if pdividesd then we remove the basis element corresponding to e{d-1}f{d-1}
     if pdividesd then
-        bas := Remove( bas, funcpos_altsquare( d, dd -1, dd + 2 ));
+        RemoveRow( ~bas, funcpos_altsquare( d, dd -1, dd + 2 ));
     end if;
-                    
-    return Matrix( bas );
-end function;
+
+end procedure;
 
 
 // the following functions tests if a system of bases for H, K, T, wH, and wK is the right one
@@ -280,6 +283,11 @@ end function;
 
 TestBasisSp := function( basH, basK, basT, wH, wK, g )
     
+    p := Characteristic( CoefficientRing( g ));
+    dimg := Dimension( g );
+    dim := SolveAltSquareDimEq( dimg : type := "Sp" );
+    pdividesd := dim mod p eq 0;
+
     // the possible combinations for the scalars
     scalars := [ <a,b,c,d > : a in [1,-1], b in [1,-1], c in [1,-1], 
                  d in [1,-1]]; 
@@ -287,14 +295,16 @@ TestBasisSp := function( basH, basK, basT, wH, wK, g )
     // check all possible combinations of scalars
     for s in scalars do 
         // build the basis
-        bas := BuildBasisSp( basH, basK, basT : wH := wH, scalars := [s[1], s[2], s[3], s[4]] );
+        bas := ZeroMatrix( Parent( basH[1][1] ), dimg + case< pdividesd | true: 1, default: 0 >, dimg );
+        BuildBasisSp( ~bas, ~basH, ~basK, ~basT : wH := wH, scalars := [s[1], s[2], s[3], s[4]] );
+        bas_mat := Matrix( bas );
         // take random element from the group
         // we want one outside of the center
         repeat 
             x0 := Random( g );
         until (x0,Random(g)) ne x0^0;
         // apply basis transform on x0
-        x := bas*x0*bas^-1;
+        x := bas_mat*x0*bas_mat^-1;
         // find preimage of x
         y := __funcAltSquareToSLdq( x : type := "Sp" );
         // check if the result is valid
@@ -313,7 +323,7 @@ end function;
     
 // a part of the basis calculated in the main function might need to be multiplied by a scalar
 // this is done in this function 
-find_scalar_for_mT := procedure( G, ~tr, dim, dH, q )
+find_scalar_for_mT := procedure( ~G, ~tr, dim, dH, q )
 
     p12 := funcpos_altsquare( dim, 1, 2 );
     p13 := funcpos_altsquare( dim, 1, dH+1 );
@@ -366,15 +376,220 @@ find_scalar_for_mT := procedure( G, ~tr, dim, dH, q )
     end if; 
 end procedure;
 
-/*
-SpDecompositionMatrix := function( d1, d2, q )
+ /* find an involution with sufficiently large minus one eigenspace and 
+       its centraliser. */
+
+InvolutionWithCentralizer := function( G, type, dimG, dim )
     
-    d := d1 + d2;
-    dd := d div 2; dd1 := d1 div 2; dd2 := d2 div 2;
+    // the eigenspace dimensions are set using heuristics
+    // eiglim1: lower limit; eiglim2: upper limit for eigenspaces
+    if type eq "Omega-" and dim eq 12 then 
+        eiglim1 := 36; eiglim2 := 36;
+    elif type eq "Omega" and dim eq 9 then 
+        eiglim1 := 18; eiglim2 := 18;
+    elif type eq "Sp" and dim eq 6 then 
+        eiglim1 := 9; eiglim2 := 9;
+    elif type eq "Sp" and dim eq 14 then 
+        eiglim1 := 40; eiglim2 := 49;
+    elif type eq "Sp" and dim eq 12 then 
+        eiglim1 := 32; eiglim2 := 36;
+    else 
+        eiglim1 := case< dim | 6: 8, 11: 29, 12: 35, default: (2/9)*dim^2 >; 
+        //eiglim1 := case< dim | 6: 8, 11: 29, 12: 35, default: (2/9)*dim^2 >;
+        eiglim2 := case< dim | 6: 8, default: (1/4)*dim^2 >; 
+    end if;
+      
+    // set up property function for InvolutionWithProperty  
+    propfunc := function( x )
+        dmin := Dimension( Eigenspace( x, -1 ));  
+        return dmin ge eiglim1 and dmin le eiglim2;
+    end function;
+        
+    // completion checking function    
+    NrGensCentInv := 10; 
+    __compcheck := func< G, C, g | NumberOfGenerators( C ) ge NrGensCentInv >;
+    
+    
+    if type eq "Sp" then 
+        // we want to take the perfect subgroup inside the centralizer of the 
+        // involution. This variable shows how deep we need to go inside the 
+        // derived series.
+        dl := 3;
+        // the number of components in the C0-module
+        nocomponents := case< dim mod Characteristic( CoefficientRing( G )) eq 0 | true: 3, default: 4 >;
+        // this function returns true if the condition we want for the dimensions of the 
+        // CD-components is true
+        good_dims := function( dims ) 
+            
+            // first we want the right number of dimensions and they should add up 
+            // to dimG
+            if #dims ne nocomponents or &+dims ne dimG then 
+                return false;
+            end if;
+            // if #dims ne 3 then return true; end if;
+            // we also want that the product of the dimensions of the two alt-components 
+            // should be equal to the tensor component
+            dims1 := [ SolveAltSquareDimEq( x : type := "Sp", pmaydividedim := false ) : x in dims ];
+            poszero := [ x : x in [1..#dims] | dims1[x] eq 0 and dims[x] ne 1 ];
+            posnonzero := [ x : x in [1..#dims] | dims1[x] ne 0 and dims[x] ne 1 ];
+            return &*dims1[posnonzero] eq dims[poszero][1];
+        end function;
+    else 
+        // the same when the type is not Sp
+        dl := case< dim | 8: 2, 9: 2, 10: 2, 11: 2, 12: 2, 18: 2, default : 1 >;
+        nocomponents := 3;
+        good_dims := func< dims | #dims eq nocomponents and not 1 in dims and &+dims eq dimG >;
+    end if; 
 
-    F := GF( q );
-    _, p := IsPrimePower( q );
-    mat := ZeroMatrix( GF( q ), d, d );
+    repeat
+        // get an involution with the right eigenspace dimensions   
+        inv := InvolutionWithProperty( G, propfunc ); 
+        // set up lists for the generators of the centralizer and its derived subgroup
+        gensC := []; gensCD := [];
+        
+        // we need to find its centralizer. The centralizer of involution function may not 
+        // return the full centralizer, and this is why we need to repeat.
+        // TODO: Is it simpler to chose another involution when Cent is too small?
+        
+       repeat 
+            // find the centralizer of inv and its derived subgroup
+            C := CentraliserOfInvolution( G, inv : CompletionCheck := __compcheck );   
+            CD := MyDerivedGroupMonteCarlo( C : 
+                      NumberGenerators := NrGensCentInv,
+                      DerivedLength := dl );      
 
-    for i in [1..d] do 
+            // add the computed generators to the ones that were computed
+            gensC := gensC cat GeneratorsSequence( C );
+            gensCD := gensCD cat GeneratorsSequence( CD );
+            // update C and CD
+            C := sub< Universe( gensC ) | gensC >;
+            CD := sub< Universe( gensCD ) | gensCD >;
+
+            // compute the CD-module and its minimal submodules
+            M := GModule( CD );
+            mins := [ x : x in MinimalSubmodules( M : Limit := 4 )];
+            // If M contains a unique submodule of dimension 1, then it is hopless and we get another 
+            // involution
+            dim_mins := [ Dimension( x ) : x in mins ]; 
+            nr_ones := #[ x : x in [1..#mins] | dim_mins[x] eq 1 ];
+            // if M has more than 4 minimal submodules, then we need more generators
+            // and so we repeat the centralizer computation
+            stop_condition := #mins lt nocomponents + 1 or nr_ones eq 1;
+            //print dim_mins;
+        until stop_condition;  
+    // the right centralizer should have 3 minimal submodules that form a direct sum            
+    until  good_dims( dim_mins );
+
+    return inv, gensCD, CD, M, mins;
+end function;
+
+/* 
+   find the right basis transformation matrix
+
+   This functions puts together the right transformation matrix from the bases of the components 
+   H, K, T, and the one-dimensional component. 
 */
+
+find_right_tr_matrix := function( G0, bas_mat, dim, dimg, dH, dK, basH, basK, basT, basOneDim )
+
+    // set up some variables
+    q := #CoefficientRing( G0 );
+    _, p := IsPrimePower( q );
+    pdividesd := dim mod p eq 0;
+    z := PrimitiveElement( GF( q ));
+
+    // convert G0 to the form determined by bas_mat
+    g := sub< SL( dimg, q ) | { bas_mat*x*bas_mat^-1 : x in Generators( G0 )}>;
+
+    // g preserves a bilinear form
+    form := ClassicalForms( g )`bilinearForm;
+    
+    // the position of the basis element f{1}*f{d+1}
+    posT := funcpos_altsquare( dim, dim, dim-dH div 2 : type := "Sp" );
+    if pdividesd then posT := posT-1; end if;
+    
+    // in the form that is preserved the value of <e1*e{d+1},f1*f{d+1}> must be a squaree
+    if not IsSquare( form[dH div 2,posT] ) then 
+        // if not square, we modify the basis of H. we simulate the multplication of 
+        // the basis element e_i for i in {1...d} by the primitive element z.
+        for i in [1..#basH] do 
+            pos := funcposinv_altsquare( dH, i : type := "Sp" );
+            // multiply things of the form ei*ej by z^2 
+            if pos[1] le dH div 2 and pos[2] le dH div 2 then
+                basH[i] *:= z^2;
+            // multiply things of the form ei*fj by z
+            elif pos[1] le dH div 2 and pos[2] gt dH div 2 then
+                basH[i] *:= z;
+           end if;
+        end for;
+
+        // we also multiply elements of basT by z 
+        for i in [1..#basT/2] do 
+            basT[i] *:= z;
+        end for;
+    else
+        z := 1; 
+    end if; 
+
+   vH := (z*Sqrt( form[1,dimg] ))^-1; 
+
+   // calculate the entry in the Gram matrix that correspondso to 
+   // <e{d+1}e{d+2},f{d+1}f{d+2}>
+   posK1 := funcpos_altsquare( dim, dH div 2+1, dH div 2+2 : type := "Sp" );
+   posK2 := funcpos_altsquare( dim, dim-dH div 2-1, dim-dH div 2 : type := "Sp" );
+   if pdividesd then posK2 := posK2 - 1; end if;
+   vK := Sqrt( form[posK1,posK2] )^-1; 
+
+   // calculate the entry in the Gram matrix that corresponds to 
+   // <f1fd{d+1},e1e{d+1}>
+   posT := funcpos_altsquare( dim, dim, dim-dH div 2 : type := "Sp" );
+   if pdividesd then posT := posT - 1; end if;
+   vT := Sqrt( z*form[dH div 2,posT] )^-1;  
+   
+   // modyfy basis elements so that the Gram matrix is contains ones
+   for i in [1..#basH] do 
+       basH[i] *:= vH;
+   end for;
+   
+   for i in [1..#basK] do
+       basK[i] *:= vK;
+   end for;
+
+       
+   for i in [1..#basT] do
+       basT[i] *:= vT;
+   end for;
+   
+   // rebuild basis and recalculate form
+   bas_mat := ZeroMatrix( GF( q ), dimg + case< pdividesd | true: 1, default: 0 >, dimg  ); 
+   BuildBasisSp( ~bas_mat, ~basH, ~basK, ~basT : wH := basOneDim[1] );          
+   g := sub< SL( dimg, q ) | { bas_mat*x*bas_mat^-1 : x in Generators( G0 )}>;
+   form := ClassicalForms( g )`bilinearForm; 
+
+   // we need to modify still the 1-dimensional component
+   // needs to be done only when p does not divide the dimension
+   if not pdividesd then
+       // get the (e1f1-enfn,e1f1-enfn)-entry of the Gram matrix 
+       b := form[dim-1,dim-1];
+       // the inverse transformation matrix for the exceptional entries of the basis 
+       auxmat := SpTransformMatrix( dH, dK, GF( q ))^-1;
+       // vec is e1f1-enfn written in terms of the exceptional entries
+       vec := auxmat[1]-auxmat[dim div 2];
+       // u and b are the coefficients of e1f1+...+e{d/2}f{d/2} and of e{d/2+1}f{d/2+1}+...+e{n}fn
+       u := GF(q)!(dH div 2)^-1; v := -GF(q)!(dK div 2)^-1; 
+       
+       P<x> := PolynomialRing( GF( q ));
+       pol := -b-2-(2*u-2*v)*(x-1)-(u^2*(dH div 2)+v^2*(dK div 2))*(x-1)^2;
+       roots := AllRoots( pol );
+       
+       basOneDim[1] := roots[1,1]^-1*basOneDim[1];              
+   end if;
+
+   v, coeffs := TestBasisSp( basH, basK, basT, basOneDim[1], basOneDim[1], G0 );  
+   assert v; 
+   bas := ZeroMatrix( GF( q ), dimg + case< pdividesd | true: 1, default: 0 >, dimg  );
+   BuildBasisSp( ~bas, ~basH, ~basK, ~basT : wH := basOneDim[1], scalars := coeffs );
+   
+   return bas;
+end function;
+

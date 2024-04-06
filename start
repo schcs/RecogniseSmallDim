@@ -1,11 +1,17 @@
 AttachSpec( "spec" );
-SetVerbose( "SymSquareVerbose", 1 );
+SetVerbose( "SymSquareVerbose", 0 );
 //SetMemoryLimit( 2*10^9 );
 
 import "smalldimreps.m":__funcSLdqToAltSquare, __funcAltSquareToSLdq, funcposinv_symsquare, __funcSLdqToSymSquare,
         funcposinv_altsquare, _funcSymSquareToSLdq, funcpos_altsquare;
+
+//import "definitions.m":IsNewCodeApplicable;
+//import "altsquare.m": RecogniseAltSquare;
+//import "symsquare.m": RecogniseSymSquare;
+
         
 SetDebugOnError( true );
 SetNthreads( 8 );
 SetGPU( true );
 load "testing.m";
+load "eamonn_test.m";
