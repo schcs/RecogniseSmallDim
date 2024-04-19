@@ -15,7 +15,6 @@ import "auxfunctions.m": MyDerivedGroupMonteCarlo, IsSimilarModMinus1List,
   IsSimilarModScalarList, InvolutionWithProperty, RandomElementWithProperty, IsSimilarModScalarMat, 
   SplitTensor, ScalarOfPreservedForm;
 
-import "altsquare_sp.m": RecogniseAltSquareSpFunc;
 import "definitions.m":altsymsquareinforf, IsNewCodeApplicable;
 import "altsquare_aux.m":find_scalar_for_mT, InvolutionWithCentralizer, BuildBasis, 
         BuildBasisSp, find_right_tr_matrix;
