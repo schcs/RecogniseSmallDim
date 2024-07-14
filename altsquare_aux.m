@@ -1,5 +1,5 @@
 /* 
-    sp_aux.m                                                                      RecogniseSmallDim
+    altsquare_aux.m                                                                RecogniseSmallDim
 
     This file contains some auxiliary functions necessary for the recognition of exterior squares of 
     for Sp(n,q).
@@ -96,38 +96,10 @@ SpSubspace := function( d1, d2, F : pdividesd := false )
 
 end function;
 
-BuildBasis := procedure( ~bas, ~basH, ~basK, ~tbas, dim, dimg, dH, dK )
-
-    dH := SolveAltSquareDimEq( #basH ); 
-    dK := SolveAltSquareDimEq( #basK );
-    d := dH + dK;
-    //bas := [ Zero( Parent( basH[1] )) : x in [1..dimg]];
-
-    for i in [1..dH], j in [i+1..dH] do
-        bas[funcpos_altsquare( dim, i, j )] := Vector( basH[funcpos_altsquare( dH, i, j )]);
-    end for;
-    
-    for i in [dH+1..dim], j in [i+1..dim] do
-        bas[funcpos_altsquare(dim, i, j )] := Vector( basK[funcpos_altsquare( dK, i-dH, j-dH )] );
-    end for;
-    
-    for i in [1..dH], j in [dH+1..dim] do
-        bas[funcpos_altsquare( dim, i, j )] := Vector( tbas[(i-1)*dK+j-dH] );
-    end for;
-
-    //return Matrix( bas );
-end procedure;
-/* 
-   Builds standard basis for V in the case of sympectic groups acting on the exterior square. 
-   We assume that V = U + W and we have standard bases for H = U wedge U, K = W wedge W, and for T = U tensor W. 
-   We can also pass on optional argument scalars which specifies a scalar factors and wH which specifies  
-*/
-            
-
 /* TODO: This can be replaced by a single matrix multiplication. If there was a function to build the bases of H, K, T, then 
    this computation can be done by computing this basis matrix, inverting it, and multiplying the input with this inverted matrix. */
 
-BuildBasisSp := procedure( ~bas, ~basH, ~basK, ~basT : wH, scalars := [1,1,1,1] )
+BuildBasisSp := function( basH, basK, basT, wH : scalars := [1,1,1,1] )
 
     a := scalars[1]; b := scalars[2]; c := scalars[3]; d := scalars[4]; 
     
@@ -139,12 +111,14 @@ BuildBasisSp := procedure( ~bas, ~basH, ~basK, ~basT : wH, scalars := [1,1,1,1] 
     dH := SolveAltSquareDimEq( #basH : type := "Sp" ); 
     dK := SolveAltSquareDimEq( #basK : type := "Sp" );
     d := dH + dK;
-    
+    dimg := #basH + #basK + #basT;
+    if wH ne 0*wH then dimg +:= 1; end if; 
+
+    pdividesd := d mod p eq 0;
+
+    bas := ZeroMatrix( GF( q ), dimg + case< pdividesd | true: 1, default: 0 >, dimg );
     // divide dimensions by 2
     dd := d div 2; ddH := dH div 2; ddK := dK div 2;
-
-    // check if p divides the dimension
-    pdividesd := d mod p eq 0;
 
     // calculate the total dimension and an array to hold the basis
     dim := case< pdividesd | true: dd*(d-1) - 2, default: dd*(d-1) -1 >;
@@ -273,8 +247,43 @@ BuildBasisSp := procedure( ~bas, ~basH, ~basK, ~basT : wH, scalars := [1,1,1,1] 
         RemoveRow( ~bas, funcpos_altsquare( d, dd -1, dd + 2 ));
     end if;
 
-end procedure;
+    return Matrix( bas );
+end function;
 
+
+BuildBasis := function( basH, basK, tbas : wH := [], type := "SL" )
+
+    if type eq "Sp" then 
+        return BuildBasisSp( basH, basK, tbas, wH );
+    end if; 
+
+    dH := SolveAltSquareDimEq( #basH ); 
+    dK := SolveAltSquareDimEq( #basK );
+    d := dH + dK;
+    dimg := d*(d-1) div 2;
+    q := #Field( Parent( basH[1] )); 
+    bas := ZeroMatrix( GF( q ), dimg ); 
+
+    for i in [1..dH], j in [i+1..dH] do
+        bas[funcpos_altsquare( d, i, j )] := Vector( basH[funcpos_altsquare( dH, i, j )]);
+    end for;
+    
+    for i in [dH+1..d], j in [i+1..d] do
+        bas[funcpos_altsquare(d, i, j )] := Vector( basK[funcpos_altsquare( dK, i-dH, j-dH )] );
+    end for;
+    
+    for i in [1..dH], j in [dH+1..d] do
+        bas[funcpos_altsquare( d, i, j )] := Vector( tbas[(i-1)*dK+j-dH] );
+    end for;
+
+    return Matrix( bas );
+end function;
+/* 
+   Builds standard basis for V in the case of sympectic groups acting on the exterior square. 
+   We assume that V = U + W and we have standard bases for H = U wedge U, K = W wedge W, and for T = U tensor W. 
+   We can also pass on optional argument scalars which specifies a scalar factors and wH which specifies  
+*/
+            
 
 // the following functions tests if a system of bases for H, K, T, wH, and wK is the right one
 // up to +-1 scalars.
@@ -295,8 +304,7 @@ TestBasisSp := function( basH, basK, basT, wH, wK, g )
     // check all possible combinations of scalars
     for s in scalars do 
         // build the basis
-        bas := ZeroMatrix( Parent( basH[1][1] ), dimg + case< pdividesd | true: 1, default: 0 >, dimg );
-        BuildBasisSp( ~bas, ~basH, ~basK, ~basT : wH := wH, scalars := [s[1], s[2], s[3], s[4]] );
+        bas := BuildBasisSp( basH, basK, basT, wH : scalars := [s[1], s[2], s[3], s[4]] );
         bas_mat := Matrix( bas );
         // take random element from the group
         // we want one outside of the center
@@ -323,7 +331,7 @@ end function;
     
 // a part of the basis calculated in the main function might need to be multiplied by a scalar
 // this is done in this function 
-find_scalar_for_mT := procedure( ~G, ~tr, dim, dH, q )
+find_scalar_for_mT := function( G, tr, dim, dH, q )
 
     p12 := funcpos_altsquare( dim, 1, 2 );
     p13 := funcpos_altsquare( dim, 1, dH+1 );
@@ -374,7 +382,8 @@ find_scalar_for_mT := procedure( ~G, ~tr, dim, dH, q )
             tr[pij] := z0*tr[pij];
       end for;
     end if; 
-end procedure;
+    return tr;
+end function;
 
  /* find an involution with sufficiently large minus one eigenspace and 
        its centraliser. */
@@ -561,8 +570,7 @@ find_right_tr_matrix := function( G0, bas_mat, dim, dimg, dH, dK, basH, basK, ba
    end for;
    
    // rebuild basis and recalculate form
-   bas_mat := ZeroMatrix( GF( q ), dimg + case< pdividesd | true: 1, default: 0 >, dimg  ); 
-   BuildBasisSp( ~bas_mat, ~basH, ~basK, ~basT : wH := basOneDim[1] );          
+   bas_mat := BuildBasisSp( basH, basK, basT, basOneDim[1] );          
    g := sub< SL( dimg, q ) | { bas_mat*x*bas_mat^-1 : x in Generators( G0 )}>;
    form := ClassicalForms( g )`bilinearForm; 
 
@@ -587,8 +595,7 @@ find_right_tr_matrix := function( G0, bas_mat, dim, dimg, dH, dK, basH, basK, ba
 
    v, coeffs := TestBasisSp( basH, basK, basT, basOneDim[1], basOneDim[1], G0 );  
    assert v; 
-   bas := ZeroMatrix( GF( q ), dimg + case< pdividesd | true: 1, default: 0 >, dimg  );
-   BuildBasisSp( ~bas, ~basH, ~basK, ~basT : wH := basOneDim[1], scalars := coeffs );
+   bas := BuildBasisSp( basH, basK, basT, basOneDim[1] : scalars := coeffs );;
    
    return bas;
 end function;

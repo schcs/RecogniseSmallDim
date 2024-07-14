@@ -19,10 +19,6 @@ import "definitions.m":altsymsquareinforf, IsNewCodeApplicable;
 import "altsquare_aux.m":find_scalar_for_mT, InvolutionWithCentralizer, BuildBasis, 
         BuildBasisSp, find_right_tr_matrix;
   
-
-
-
-
 // 2-dimensional recognition
 
 RecogniseAltSquareDim2 := function( G : type := "SL" )
@@ -35,8 +31,7 @@ RecogniseAltSquareDim2 := function( G : type := "SL" )
         return false;
     end if;
     
-    return true, _, pmap< GL( 2, F ) -> GL( 1, F ) |
-           x:->[ Determinant( x )]>, Basis( VectorSpace( F, 2 ));
+    return true, Basis( VectorSpace( F, 2 ));
 end function;
     
 // three dimensional recognition    
@@ -45,11 +40,8 @@ RecogniseAltSquareDim3 := function( G : type := "SL" )
     
     vprint SymSquareVerbose: "# Recog AltSquare dim 3";
     q := #CoefficientRing( G );
-      
-    a := map< GL(3,q) -> GL(3,q) | x :-> __funcSLdqToAltSquare( x )>;
-    b := map< GL(3,q) -> GL(3,q) | x :-> __funcAltSquareToSLdq( x )>; 
-        
-    return true, a, b, One( GL( 3, q ));
+
+    return true, One( GL( 3, q ));
 end function;
     
 // 4-dimensional recognition    
@@ -63,22 +55,15 @@ RecogniseAltSquareDim4 := function( G : type := "SL" )
        transforms G to canonical form with respect to this form. */
       
     q := #CoefficientRing( G );
-    mat := GL( 6, q )!TransformForm( G );
-    mat := mat*GL(6,q)!DiagonalMatrix( GF( q ), [1,-1,1,1,1,1] );
-        
+    mat := TransformForm( G );
+    mat := mat*DiagonalMatrix( GF( q ), [1,-1,1,1,1,1] );
+    
     // construct the function SL(4,q) -> G 
-      
-    a := map< GL( 4, q ) -> GL( 6, q ) | 
-         x :-> (SL(6,q)!__funcSLdqToAltSquare( x )^(mat^-1)) >;
-    
-    // construct the function G -> SL( 4, q )
-    
-    b := pmap< GL( 6, q ) -> GL( 4, q ) | 
-         x :-> __funcAltSquareToSLdq( x^mat ) >;
+
+    mat := GL( 6, q )!mat;
 
     vprint SymSquareVerbose: "# Recog AltSquare dim 4 took", Cputime()-cputm;
-    
-    return true, a, b, mat^-1;
+    return true, mat^-1;
 end function;    
    
 
@@ -359,8 +344,12 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
         aK := MyDerivedGroupMonteCarlo( aK : DerivedLength := case< dK | 4: 2, default: 1 >); 
         
         // run the recognition procedure 
-        v1, b1, c1, bas1 := RecogniseAltSquareFunc( aH : type := type ); 
-        v2, b2, c2, bas2 := RecogniseAltSquareFunc( aK : type := type ); 
+        v1, bas1 := RecogniseAltSquareFunc( aH : type := type ); 
+        v2, bas2 := RecogniseAltSquareFunc( aK : type := type ); 
+        
+        c1 := pmap< GL( dimH, q ) -> GL( dH, q ) | x :-> GL( dH, q )!__funcAltSquareToSLdq( bas1*x*bas1^-1 : type := type ) >;
+        c2 := pmap< GL( dimK, q ) -> GL( dK, q ) | x :-> GL( dK, q )!__funcAltSquareToSLdq( bas2*x*bas2^-1 : type := type ) >;
+        
         assert v1 and v2;
 
         // bas1 is [e12,e13,...,e23,...,e{k-1}{k}]
@@ -449,58 +438,51 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
 
        We buld the basis using the bases calculated for H, K, and T */
 
-    
-    if type ne "Sp" then    
-        tr := ZeroMatrix( GF( q ), dimg ); 
-        BuildBasis( ~tr, ~basH, ~basK, ~basT, dim, dimg, dH, dK );
-    else 
-        tr := ZeroMatrix( GF( q ), dimg + case< sp_pdividesd | true: 1, default: 0 >, dimg );
-        BuildBasisSp( ~tr, ~basH, ~basK, ~basT : wH := basOneDim[1] );
-    end if; 
-    
+    tr := BuildBasis( basH, basK, basT : wH := basOneDim[1], type := type );
+
     // some rows of the matrix tr need to be multiplied by a scalar.
 
     if type eq "Sp" then 
         tr := find_right_tr_matrix( G, tr, dim, dimg, dH, dK, basH, basK, basT, basOneDim );
     else 
-        find_scalar_for_mT( ~G, ~tr, dim, dH, q );
+        tr := find_scalar_for_mT( G, tr, dim, dH, q );
     end if; 
 
     // construct the maps between GL(dim,q) and G
     
-    a := map< GL( dim, q ) -> GL( dimg, q ) | x :-> GL( dimg, q )!tr^-1*__funcSLdqToAltSquare( x : type := type )*tr >;
-    b := pmap< GL( dimg, q ) -> GL( dim, q ) | x :-> GL( dim, q )!__funcAltSquareToSLdq( tr*x*tr^-1 : type := type ) >;
+    //a := map< GL( dim, q ) -> GL( dimg, q ) | x :-> GL( dimg, q )!tr^-1*__funcSLdqToAltSquare( x : type := type )*tr >;
+    //b := pmap< GL( dimg, q ) -> GL( dim, q ) | x :-> GL( dim, q )!__funcAltSquareToSLdq( tr*x*tr^-1 : type := type ) >;
 
     vprint SymSquareVerbose: "# Recog AltSquare dim", dim, "took ", 
       Cputime()-cputm;
       
-    return true, a, b, tr;
+    return true, tr;
 end function;
                 
-intrinsic RecogniseAltSquare( G::GrpMat : 
-            type := "SL", 
-            CheckResult := false,
-            Method := "Recursive" ) 
-          -> BoolElt, Map, Map, GrpMatElt
+function RecogniseAltSquare( G : type := "SL", CheckResult := false, Method := "Recursive" ) 
                                                          
- {Checks if the input group G is isomorphic to a classical group of type <type> over a field of 
- odd characteristic in its exterior square representation. Returns true or false, a map from the 
- the standard copy of the classical group in Magma to G, a map from G to the classical group in Magma, 
- and two matrices X and Y such that the conjugate G^X is equal to the large composition factor of the 
- exterior square of Y*S*Y^-1 in the standard basis where S is the corresponding classical group in Magma. 
+ /* 
+    Checks if the input group G is isomorphic to a classical group of type <type> over a field of 
+    odd characteristic in its exterior square representation. Returns true or false, a map from the 
+    the standard copy of the classical group in Magma to G, a map from G to the classical group in Magma, 
+    and two matrices X and Y such that the conjugate G^X is equal to the large composition factor of the 
+    exterior square of Y*S*Y^-1 in the standard basis where S is the corresponding classical group in Magma. 
                            
- Use the optional argument "CheckResult := true" to check the final result.
+    Use the optional argument "CheckResult := true" to check the final result.
                            
-The basic algorithm is implemented in two variations. The first uses a recursive call for smaller 
-dimensional exterior square recognition, while the second uses recognition of tensor decomposition 
-with IsTensor. In small dimensions (how small depends on the type of the group), the version using 
-tensor recognition is called, while if the dimension is high enough, then the recursive version is used.
-This choice can be overwritten by setting <Method> to "Tensor".}    
+    The basic algorithm is implemented in two variations. The first uses a recursive call for smaller 
+    dimensional exterior square recognition, while the second uses recognition of tensor decomposition 
+    with IsTensor. In small dimensions (how small depends on the type of the group), the version using 
+    tensor recognition is called, while if the dimension is high enough, then the recursive version is used.
+    This choice can be overwritten by setting <Method> to "Tensor".}    
+*/
 
+    // check if it was already computed
     if assigned G`AltSymSquareInfo then 
         return true, G`AltSymSquareInfo`phi_map, G`AltSymSquareInfo`tau_map, G`AltSymSquareInfo`tr_matrix_outer;
     end if; 
 
+    // get parameters of the group
     dimg := Dimension( G );
     dim := SolveAltSquareDimEq( dimg : type := type );        
     q := #CoefficientRing( G );
@@ -508,8 +490,7 @@ This choice can be overwritten by setting <Method> to "Tensor".}
     q0 := case< type | "SU": Integers()!( Sqrt( q )), default: q >;        
     error if not IsNewCodeApplicable( "Alt", type, dim, q ), "This type of group is not implemented for altsquare recognition";
 
-    v, _, _, tr := RecogniseAltSquareFunc( G : type := type, 
-                              Method := Method );  
+    v, tr := RecogniseAltSquareFunc( G : type := type, Method := Method );  
     assert v;
 
     /* The matrix tr will conjugate G into a subgroup of AltSquare( SL( dim, q )). If the original G 
@@ -582,4 +563,4 @@ This choice can be overwritten by setting <Method> to "Tensor".}
     end if;
 
     return true, a, b, tr_inv;
-end intrinsic;
+end function;
