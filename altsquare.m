@@ -16,8 +16,8 @@ import "auxfunctions.m": MyDerivedGroupMonteCarlo, IsSimilarModMinus1List,
   SplitTensor, ScalarOfPreservedForm;
 
 import "definitions.m":altsymsquareinforf, IsNewCodeApplicable;
-import "altsquare_aux.m":find_scalar_for_mT, InvolutionWithCentralizer, BuildBasis, 
-        BuildBasisSp, find_right_tr_matrix;
+import "altsquare_aux.m":find_scalar_for_mT, InvolutionWithCentralizer, 
+    find_right_tr_matrix, BuildBasisMatrix;
   
 // 2-dimensional recognition
 
@@ -430,7 +430,7 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
     if type eq "Sp" and not sp_pdividesd then
         basOneDim := [ M!(Basis( monedim )[1])];
     else
-        basOneDim := [ Zero( M )];
+        basOneDim := [ ];
     end if;
 
     /* we return to the common part of the code. 
@@ -438,7 +438,11 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
 
        We buld the basis using the bases calculated for H, K, and T */
 
-    tr := BuildBasis( basH, basK, basT : wH := basOneDim[1], type := type );
+    bbb := BuildBasisMatrix( GF(q), dH, dK : type := type );
+    mmm := Matrix( basH cat basK cat basT cat basOneDim );
+    tr := bbb*mmm;
+    //tr := BuildBasis( basH, basK, basT : wH := basOneDim[1], type := type );
+    
 
     // some rows of the matrix tr need to be multiplied by a scalar.
 
