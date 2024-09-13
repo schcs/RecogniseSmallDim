@@ -12,12 +12,12 @@ import "smalldimreps.m":SolveAltSquareDimEq, funcpos_altsquare,
   __funcSLdqToAltSquare, __funcAltSquareToSLdq;
   
 import "auxfunctions.m": MyDerivedGroupMonteCarlo, IsSimilarModMinus1List, 
-  IsSimilarModScalarList, InvolutionWithProperty, RandomElementWithProperty, IsSimilarModScalarMat, 
+  IsSimilarModScalarList, RandomElementWithProperty, IsSimilarModScalarMat, 
   SplitTensor, ScalarOfPreservedForm;
 
 import "definitions.m":altsymsquareinforf, IsNewCodeApplicable;
 import "altsquare_aux.m":find_scalar_for_mT, InvolutionWithCentralizer, 
-    find_right_tr_matrix, BuildBasisMatrix;
+    find_scalars_for_exterior_square, find_scalars_for_exterior_square_sp, BuildBasisMatrix;
   
 // 2-dimensional recognition
 
@@ -28,10 +28,10 @@ RecogniseAltSquareDim2 := function( G : type := "SL" )
     
     if Dimension( G ) ne 1 and ( Generators( G )  ne { One( G )} 
                or Generators( G ) ne {} ) then
-        return false;
+        return false, _;
     end if;
     
-    return true, Basis( VectorSpace( F, 2 ));
+    return true, Basis( VectorSpace( CoefficientRing( G ), 2 ));
 end function;
     
 // three dimensional recognition    
@@ -85,11 +85,6 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
     
     // need to know if type is Sp and p divides dim
     sp_pdividesd := type eq "Sp" and dim mod p eq 0;
-
-    // Sp groups are handled by another function
-    //if type eq "Sp" then
-    //  return RecogniseAltSquareSpFunc( G : Method := Method );
-    //end if;
                                                                        
     // in small dimension, call other functions
     case dim: 
@@ -248,7 +243,7 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
             sch := [ ScalarOfPreservedForm( x, h_form ) : x in gens1h ];    
             sck := [ ScalarOfPreservedForm( x, k_form ) : x in gens1k ];
                    
-            // if a generator preseve the form module -1, then this is fixed.
+            // if a generator preseve the form modulo -1, then this is fixed.
             for i in [1..#sch] do
                 if sch[i] ne 1 then
                     gens1h[i] := gens1h[i]*ScalarMatrix( GF( q ), dH, Sqrt( GF( q )!(sch[i]))^-1);
@@ -276,17 +271,10 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
        
        gens1k := [ GL(dimK,q)!__funcSLdqToAltSquare( x : type := type ) : x in gens1k ];
        gens2k := [ x@ak : x in gensCD ];
-
-       // then we calculate the projection with the ah function
-       gens2h := [ x@ah : x in gensCD ]; 
-
-       // we do the same for the K-component
-       gens2k := [ x@ak : x in gensCD ];
        
        // the generators gens1h and gens2h should be similar module scalar
        // if they are not, then dim H eq dim K and the order of H and K was set up incorrectly
        vh, scalarsh := IsSimilarModScalarList( gens1h, gens2h );
-       
        if vh then
            // gens1k and gens2k should be similar mod scalar
            vk, scalarsk := IsSimilarModScalarList( gens1k, gens2k ); assert vk;
@@ -379,7 +367,7 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
            aH tensor (aK)^-t or (aH)^-t tensor (aK)^-t where ^-t is the inverse
            transpose isomorphism. We need to discover which one it is and 
            modify bas1 and bas2 accordingly. This can only happen if the dimension of H or K is 
-           equal to 4. WHY???? */
+           equal to 4. WHY? See the companion paper */
 
             // set up the possible combinations of the inverse transpose and the identity
             // functions.
@@ -438,24 +426,16 @@ RecogniseAltSquareFunc := function( G :  Method := "Recursive",
 
        We buld the basis using the bases calculated for H, K, and T */
 
-    bbb := BuildBasisMatrix( GF(q), dH, dK : type := type );
-    mmm := Matrix( basH cat basK cat basT cat basOneDim );
-    tr := bbb*mmm;
-    //tr := BuildBasis( basH, basK, basT : wH := basOneDim[1], type := type );
-    
+    tr := BuildBasisMatrix( GF(q), dH, dK : type := type )*Matrix( basH cat basK cat basT cat basOneDim );
 
     // some rows of the matrix tr need to be multiplied by a scalar.
 
     if type eq "Sp" then 
-        tr := find_right_tr_matrix( G, tr, dim, dimg, dH, dK, basH, basK, basT, basOneDim );
+        tr := find_scalars_for_exterior_square_sp( G, tr, basH, basK, basT, basOneDim );
     else 
-        tr := find_scalar_for_mT( G, tr, dim, dH, q );
+        tr := find_scalars_for_exterior_square( G, tr, dH, dK );
     end if; 
 
-    // construct the maps between GL(dim,q) and G
-    
-    //a := map< GL( dim, q ) -> GL( dimg, q ) | x :-> GL( dimg, q )!tr^-1*__funcSLdqToAltSquare( x : type := type )*tr >;
-    //b := pmap< GL( dimg, q ) -> GL( dim, q ) | x :-> GL( dim, q )!__funcAltSquareToSLdq( tr*x*tr^-1 : type := type ) >;
 
     vprint SymSquareVerbose: "# Recog AltSquare dim", dim, "took ", 
       Cputime()-cputm;
