@@ -477,8 +477,11 @@ find_scalars_for_exterior_square_sp := function( G, bas_mat, basH, basK, basT, b
     pdividesd := dim mod p eq 0;
     z := PrimitiveElement( GF( q ));
 
-    // g preserves a bilinear form
+    // g preserves a bilinear form. we compute what form G would preserve under the 
+    // basis computed so far
     form := bas_mat*ClassicalForms( G )`bilinearForm*Transpose( bas_mat );
+    // the form can only be determined modulo scalar. 
+    // we want the (e1e2, f2f1)-entry of the form to be a square 
     if not IsSquare( form[1,dimg] ) then form *:= z; end if;
     
     // here we sample the values of the form to determine the right scalars
